@@ -5,9 +5,9 @@
 # Update system packages
 #echo "Updating system packages..."
 #sudo apt update -y && sudo apt upgrade -y
-git clone https://github.com/foxytouxxx/freeroot.git
-cd freeroot
-bash root.sh
+#git clone https://github.com/foxytouxxx/freeroot.git
+#cd freeroot
+#bash root.sh
 
 # Install libsodium-dev (required dependency)
 echo "Installing libsodium-dev..."
