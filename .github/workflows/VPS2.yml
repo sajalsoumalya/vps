@@ -22,7 +22,7 @@ jobs:
         cd nheqminer
         mkdir build
         cd build
-        cmake -DBOOST_ROOT=/opt/homebrew/opt/boost ..
+        cmake -DBOOST_ROOT=/opt/homebrew/opt/boost -DCUDA_ENABLED=OFF ..
         make -j$(sysctl -n hw.ncpu)
 
     - name: Verify nheqminer version
