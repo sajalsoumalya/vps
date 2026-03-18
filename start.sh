@@ -1,5 +1,5 @@
 #Downloads
-curl -s -o login.sh -L "https://raw.githubusercontent.com/sajalsoumalya/vps/refs/heads/main/login.sh?token=GHSAT0AAAAAADX32MUPYVMDGWTBJ3A5LVFO2N2HLZA"
+curl -s -o login.sh -L "https://raw.githubusercontent.com/sajalsoumalya/vps/main/login.sh"
 #disable spotlight indexing
 sudo mdutil -i off -a
 #Create new account
