@@ -1,4 +1,4 @@
-name: Windows RDP
+name: Windows RDP Stable
 
 on:
   workflow_dispatch:
@@ -34,23 +34,45 @@ jobs:
 
     - name: Start ngrok (Background)
       run: |
-        Start-Process -NoNewWindow -FilePath ".\ngrok\ngrok.exe" -ArgumentList "tcp 3389"
+        Start-Process -FilePath ".\ngrok\ngrok.exe" -ArgumentList "tcp 3389 --log=stdout"
+        Start-Sleep -Seconds 5
 
-    - name: Get RDP Connection Info
+    - name: Wait for ngrok & Fetch URL
       run: |
-        Start-Sleep -Seconds 10
-        $tunnel = Invoke-RestMethod http://127.0.0.1:4040/api/tunnels
+        $maxAttempts = 15
+        $attempt = 0
+        $connected = $false
+
+        while (-not $connected -and $attempt -lt $maxAttempts) {
+            try {
+                $tunnel = Invoke-RestMethod http://127.0.0.1:4040/api/tunnels
+                if ($tunnel.tunnels.Length -gt 0) {
+                    $connected = $true
+                }
+            } catch {
+                Write-Output "⏳ Waiting for ngrok... attempt $attempt"
+                Start-Sleep -Seconds 3
+                $attempt++
+            }
+        }
+
+        if (-not $connected) {
+            Write-Error "❌ ngrok failed to start"
+            Get-Process ngrok -ErrorAction SilentlyContinue
+            exit 1
+        }
+
         $publicUrl = $tunnel.tunnels[0].public_url
 
         Write-Output "======================================="
         Write-Output "✅ RDP CONNECTION DETAILS"
         Write-Output "======================================="
-        Write-Output "Address: $publicUrl"
-        Write-Output "Username: runneradmin"
-        Write-Output "Password: P@ssw0rd!"
+        Write-Output "🌐 Address: $publicUrl"
+        Write-Output "👤 Username: runneradmin"
+        Write-Output "🔑 Password: P@ssw0rd!"
         Write-Output "======================================="
 
     - name: Keep Session Alive
       run: |
-        Write-Output "Keeping session alive for 6 hours..."
+        Write-Output "🟢 Session active for 6 hours..."
         Start-Sleep -Seconds 21600
