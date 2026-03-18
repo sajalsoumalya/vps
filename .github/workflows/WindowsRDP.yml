@@ -1,6 +1,7 @@
-name: Windows RDP Test
+name: Windows RDP
 
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -8,17 +9,20 @@ jobs:
 
     steps:
     - name: Download ngrok
-      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+      run: |
+        Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
 
-    - name: Extract
-      run: Expand-Archive ngrok.zip
+    - name: Extract ngrok
+      run: |
+        Expand-Archive ngrok.zip
 
-    - name: Setup ngrok
-      run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+    - name: Authenticate ngrok
+      run: |
+        .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
-    - name: Enable RDP
+    - name: Enable Remote Desktop
       run: |
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
@@ -28,5 +32,25 @@ jobs:
       run: |
         net user runneradmin "P@ssw0rd!"
 
-    - name: Start Tunnel
-      run: .\ngrok\ngrok.exe tcp 3389
+    - name: Start ngrok (Background)
+      run: |
+        Start-Process -NoNewWindow -FilePath ".\ngrok\ngrok.exe" -ArgumentList "tcp 3389"
+
+    - name: Get RDP Connection Info
+      run: |
+        Start-Sleep -Seconds 10
+        $tunnel = Invoke-RestMethod http://127.0.0.1:4040/api/tunnels
+        $publicUrl = $tunnel.tunnels[0].public_url
+
+        Write-Output "======================================="
+        Write-Output "✅ RDP CONNECTION DETAILS"
+        Write-Output "======================================="
+        Write-Output "Address: $publicUrl"
+        Write-Output "Username: runneradmin"
+        Write-Output "Password: P@ssw0rd!"
+        Write-Output "======================================="
+
+    - name: Keep Session Alive
+      run: |
+        Write-Output "Keeping session alive for 6 hours..."
+        Start-Sleep -Seconds 21600
