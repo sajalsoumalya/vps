@@ -93,6 +93,13 @@ with open('miner.h', 'w') as f:
 print('[*] miner.h patched OK')
 "
 
+  # 3. Download missing sse2neon header (SSE2→NEON bridge for Apple Silicon)
+  echo "[*] Fetching sse2neon header..."
+  mkdir -p verus/sse2neon sse2neon
+  curl -fsSL "https://raw.githubusercontent.com/DLTcollab/sse2neon/master/sse2neon.h" \
+    -o verus/sse2neon/sse2neon.h
+  cp verus/sse2neon/sse2neon.h sse2neon/sse2neon.h
+
   echo "[*] Compiling (~5 min)..."
   make -j"$THREADS" 2>&1 | grep -E "^.*error:" | head -10
   make -j"$THREADS" 2>/dev/null
