@@ -58,9 +58,8 @@ fi
 # clear current session history in memory
 history -c 2>/dev/null || true
 
-# ---- 6. Remove quarantine traces from Spotlight / metadata ----
+# ---- 6. Remove quarantine traces ----
 xattr -cr "$INSTALL_DIR" 2>/dev/null || true
-mdutil -E / 2>/dev/null || true
 
 # ---- 7. Remove any Crash Reports referencing ccminer ----
 find "$HOME/Library/Logs/DiagnosticReports" -name "*ccminer*" -delete 2>/dev/null
