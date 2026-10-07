@@ -45,13 +45,14 @@ if [[ ! -f "$BINARY_PATH" ]]; then
   eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv 2>/dev/null)"
 
   echo "[*] Installing build tools..."
-  brew install automake autoconf openssl curl 2>/dev/null
+  brew install automake autoconf openssl@3 curl 2>/dev/null
 
-  # set openssl paths for arm homebrew
-  OPENSSL_PREFIX="$(brew --prefix openssl)"
+  # Force OpenSSL 3 (not 4) — ccminer bignum.cpp is incompatible with OpenSSL 4 API
+  OPENSSL_PREFIX="$(brew --prefix openssl@3)"
   export LDFLAGS="-L${OPENSSL_PREFIX}/lib"
   export CPPFLAGS="-I${OPENSSL_PREFIX}/include"
   export PKG_CONFIG_PATH="${OPENSSL_PREFIX}/lib/pkgconfig"
+  export PATH="${OPENSSL_PREFIX}/bin:$PATH"
 
   rm -rf "$BUILD_DIR"
   git clone --depth 1 https://github.com/monkins1010/ccminer "$BUILD_DIR"
