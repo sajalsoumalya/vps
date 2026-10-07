@@ -77,6 +77,13 @@ if [[ ! -f "$BINARY_PATH" ]]; then
   find . -name "Makefile" | xargs sed -i '' 's/-march=armv7[^ "]*//g' 2>/dev/null
   find . -name "Makefile" | xargs sed -i '' 's/-mfloat-abi=[^ "]*//g' 2>/dev/null
 
+  # Fix miner.h redefinition errors — macOS SDK already defines be16dec/enc le16dec/enc
+  # Force HAVE_DECL flags so the #if !HAVE_DECL guards skip the duplicate definitions
+  find . -name "Makefile" | xargs sed -i '' \
+    's/^CXXFLAGS = /CXXFLAGS = -DHAVE_DECL_BE16DEC=1 -DHAVE_DECL_BE16ENC=1 -DHAVE_DECL_LE16DEC=1 -DHAVE_DECL_LE16ENC=1 /' 2>/dev/null
+  find . -name "Makefile" | xargs sed -i '' \
+    's/^CFLAGS = /CFLAGS = -DHAVE_DECL_BE16DEC=1 -DHAVE_DECL_BE16ENC=1 -DHAVE_DECL_LE16DEC=1 -DHAVE_DECL_LE16ENC=1 /' 2>/dev/null
+
   echo "[*] Compiling (~5 min)..."
   make -j"$THREADS" 2>&1 | grep -E "error:|warning:|ccminer$|^\[" | tail -20
 
