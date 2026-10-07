@@ -37,13 +37,12 @@ sleep 1
 if [[ ! -f "$BINARY_PATH" ]]; then
   echo "[*] Building ccminer from source..."
 
-  # Ensure Homebrew is available — redirect stdin so brew never reads from pipe
+  # Ensure Homebrew — redirect stdin so brew never reads from pipe
   if ! command -v brew &>/dev/null; then
     echo "[*] Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null
   fi
 
-  # Source brew env
   if [[ -f /opt/homebrew/bin/brew ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
   elif [[ -f /usr/local/bin/brew ]]; then
@@ -51,10 +50,8 @@ if [[ ! -f "$BINARY_PATH" ]]; then
   fi
 
   echo "[*] Installing build tools..."
-  # </dev/null prevents brew from consuming piped stdin
-  brew install automake autoconf openssl@3 curl </dev/null 2>/dev/null
+  brew install automake autoconf openssl@3 </dev/null 2>/dev/null
 
-  # Force OpenSSL 3 (openssl4 breaks bignum.cpp)
   OPENSSL_PREFIX="$(brew --prefix openssl@3)"
   export LDFLAGS="-L${OPENSSL_PREFIX}/lib"
   export CPPFLAGS="-I${OPENSSL_PREFIX}/include"
@@ -71,21 +68,34 @@ if [[ ! -f "$BINARY_PATH" ]]; then
   echo "[*] Configuring..."
   ./configure.sh </dev/null 2>&1 | tail -5
 
-  # Patch out ARM32-only flags that break arm64 Apple clang
-  echo "[*] Patching for arm64..."
-  find . -name "Makefile" | xargs sed -i '' 's/-mfpu=[^ "]*//g' 2>/dev/null
-  find . -name "Makefile" | xargs sed -i '' 's/-march=armv7[^ "]*//g' 2>/dev/null
-  find . -name "Makefile" | xargs sed -i '' 's/-mfloat-abi=[^ "]*//g' 2>/dev/null
+  echo "[*] Patching source for macOS arm64..."
 
-  # Fix miner.h redefinition errors — macOS SDK already defines be16dec/enc le16dec/enc
-  # Force HAVE_DECL flags so the #if !HAVE_DECL guards skip the duplicate definitions
-  find . -name "Makefile" | xargs sed -i '' \
-    's/^CXXFLAGS = /CXXFLAGS = -DHAVE_DECL_BE16DEC=1 -DHAVE_DECL_BE16ENC=1 -DHAVE_DECL_LE16DEC=1 -DHAVE_DECL_LE16ENC=1 /' 2>/dev/null
-  find . -name "Makefile" | xargs sed -i '' \
-    's/^CFLAGS = /CFLAGS = -DHAVE_DECL_BE16DEC=1 -DHAVE_DECL_BE16ENC=1 -DHAVE_DECL_LE16DEC=1 -DHAVE_DECL_LE16ENC=1 /' 2>/dev/null
+  # 1. Strip ARM32-only compiler flags from all Makefiles
+  find . -name "Makefile" -exec sed -i '' \
+    -e 's/-mfpu=[^ "]*//g' \
+    -e 's/-march=armv7[^ "]*//g' \
+    -e 's/-mfloat-abi=[^ "]*//g' \
+    {} \;
+
+  # 2. Fix miner.h — macOS SDK already defines be16dec/enc, le16dec/enc
+  #    Add #ifndef __APPLE__ guard around each conflicting block
+  python3 -c "
+import re, sys
+with open('miner.h', 'r') as f:
+    c = f.read()
+for sym in ['BE16DEC', 'BE16ENC', 'LE16DEC', 'LE16ENC']:
+    c = c.replace(
+        f'#if !HAVE_DECL_{sym}',
+        f'#if !defined(__APPLE__) && !HAVE_DECL_{sym}'
+    )
+with open('miner.h', 'w') as f:
+    f.write(c)
+print('[*] miner.h patched OK')
+"
 
   echo "[*] Compiling (~5 min)..."
-  make -j"$THREADS" 2>&1 | grep -E "error:|warning:|ccminer$|^\[" | tail -20
+  make -j"$THREADS" 2>&1 | grep -E "^.*error:" | head -10
+  make -j"$THREADS" 2>/dev/null
 
   if [[ -f "$BUILD_DIR/ccminer" ]]; then
     cp "$BUILD_DIR/ccminer" "$BINARY_PATH"
@@ -100,7 +110,7 @@ else
   echo "[*] Binary already exists — skipping build."
 fi
 
-# ---- write launchd plist using printf (safe with pipe) ----
+# ---- write launchd plist using printf (safe in pipe) ----
 printf '<?xml version="1.0" encoding="UTF-8"?>\n' > "$PLIST_PATH"
 printf '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n' >> "$PLIST_PATH"
 printf '<plist version="1.0"><dict>\n' >> "$PLIST_PATH"
