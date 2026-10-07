@@ -63,6 +63,11 @@ if [[ ! -f "$BINARY_PATH" ]]; then
   echo "[*] Configuring..."
   ./configure.sh 2>&1 | tail -10
 
+  # Strip ARM32-only flag that breaks Apple Silicon (arm64) clang
+  echo "[*] Patching Makefile for arm64..."
+  find . -name "Makefile" -exec sed -i '' 's/-mfpu=[^ ]*//g' {} \; 2>/dev/null
+  find . -name "*.mk"     -exec sed -i '' 's/-mfpu=[^ ]*//g' {} \; 2>/dev/null
+
   echo "[*] Compiling (this takes ~5 min)..."
   make -j"$THREADS" 2>&1 | tail -5
 
