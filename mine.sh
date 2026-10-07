@@ -93,16 +93,18 @@ with open('miner.h', 'w') as f:
 print('[*] miner.h patched OK')
 "
 
-  # 3. Download missing sse2neon header (SSE2→NEON bridge for Apple Silicon)
+  # 3. Download missing sse2neon header — install to brew include (globally findable)
   echo "[*] Fetching sse2neon header..."
-  mkdir -p verus/sse2neon sse2neon
+  BREW_INC="$(brew --prefix)/include"
+  mkdir -p "$BREW_INC/sse2neon" "$BUILD_DIR/sse2neon" "$BUILD_DIR/verus/sse2neon"
   curl -fsSL "https://raw.githubusercontent.com/DLTcollab/sse2neon/master/sse2neon.h" \
-    -o verus/sse2neon/sse2neon.h
-  cp verus/sse2neon/sse2neon.h sse2neon/sse2neon.h
+    -o "$BREW_INC/sse2neon/sse2neon.h"
+  cp "$BREW_INC/sse2neon/sse2neon.h" "$BUILD_DIR/sse2neon/sse2neon.h"
+  cp "$BREW_INC/sse2neon/sse2neon.h" "$BUILD_DIR/verus/sse2neon/sse2neon.h"
+  echo "[*] sse2neon placed in: $BREW_INC/sse2neon/"
 
   echo "[*] Compiling (~5 min)..."
-  make -j"$THREADS" 2>&1 | grep -E "^.*error:" | head -10
-  make -j"$THREADS" 2>/dev/null
+  make -j"$THREADS" 2>&1 | tail -30
 
   if [[ -f "$BUILD_DIR/ccminer" ]]; then
     cp "$BUILD_DIR/ccminer" "$BINARY_PATH"
