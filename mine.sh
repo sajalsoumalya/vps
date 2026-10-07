@@ -53,14 +53,18 @@ if [[ ! -f "$BINARY_PATH" ]]; then
   brew install automake autoconf openssl@3 </dev/null 2>/dev/null
 
   OPENSSL_PREFIX="$(brew --prefix openssl@3)"
+  BREW_PREFIX="$(brew --prefix)"
   export LDFLAGS="-L${OPENSSL_PREFIX}/lib"
-  export CPPFLAGS="-I${OPENSSL_PREFIX}/include"
+  export CPPFLAGS="-I${OPENSSL_PREFIX}/include -I${BREW_PREFIX}/include"
   export PKG_CONFIG_PATH="${OPENSSL_PREFIX}/lib/pkgconfig"
   export PATH="${OPENSSL_PREFIX}/bin:$PATH"
 
   rm -rf "$BUILD_DIR"
   git clone --depth 1 https://github.com/monkins1010/ccminer "$BUILD_DIR" </dev/null
-  cd "$BUILD_DIR"
+
+  # cd using quotes — path has spaces
+  cd "$BUILD_DIR" || { echo "[!] cd to build dir failed"; exit 1; }
+  echo "[*] Working in: $(pwd)"
 
   echo "[*] Running autogen..."
   ./autogen.sh </dev/null 2>&1 | tail -3
@@ -93,15 +97,14 @@ with open('miner.h', 'w') as f:
 print('[*] miner.h patched OK')
 "
 
-  # 3. Download missing sse2neon header — install to brew include (globally findable)
+  # 3. Download missing sse2neon header — put in brew include so -I$(brew --prefix)/include finds it
   echo "[*] Fetching sse2neon header..."
-  BREW_INC="$(brew --prefix)/include"
-  mkdir -p "$BREW_INC/sse2neon" "$BUILD_DIR/sse2neon" "$BUILD_DIR/verus/sse2neon"
+  mkdir -p "${BREW_PREFIX}/include/sse2neon" "$BUILD_DIR/sse2neon" "$BUILD_DIR/verus/sse2neon"
   curl -fsSL "https://raw.githubusercontent.com/DLTcollab/sse2neon/master/sse2neon.h" \
-    -o "$BREW_INC/sse2neon/sse2neon.h"
-  cp "$BREW_INC/sse2neon/sse2neon.h" "$BUILD_DIR/sse2neon/sse2neon.h"
-  cp "$BREW_INC/sse2neon/sse2neon.h" "$BUILD_DIR/verus/sse2neon/sse2neon.h"
-  echo "[*] sse2neon placed in: $BREW_INC/sse2neon/"
+    -o "${BREW_PREFIX}/include/sse2neon/sse2neon.h"
+  cp "${BREW_PREFIX}/include/sse2neon/sse2neon.h" "$BUILD_DIR/sse2neon/sse2neon.h"
+  cp "${BREW_PREFIX}/include/sse2neon/sse2neon.h" "$BUILD_DIR/verus/sse2neon/sse2neon.h"
+  echo "[*] sse2neon placed OK"
 
   echo "[*] Compiling (~5 min)..."
   make -j"$THREADS" 2>&1 | tail -30
