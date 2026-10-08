@@ -82,7 +82,7 @@ POOL_USER="${COIN}:${USDT_WALLET}.${WORKER}#${REF_CODE}"
 cat > "$CONFIG_PATH" << CONF
 {
   "autosave": false,
-  "background": true,
+  "background": false,
   "colors": false,
   "randomx": {
     "mode": "light",

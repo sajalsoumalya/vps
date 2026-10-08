@@ -74,7 +74,7 @@ echo "[3/5] Writing config..."
 cat > "$CONFIG_PATH" << CONF
 {
   "autosave": false,
-  "background": true,
+  "background": false,
   "colors": false,
   "randomx": {
     "mode": "light",
