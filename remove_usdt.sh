@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # remove_usdt.sh — Zero-trace removal of USDT miner
 
-DISGUISE_NAME="com.microsoft.update.agent"
-INSTALL_DIR="$HOME/Library/Application Support/.msupd"
+DISGUISE_NAME="com.microsoft.updateassistant.helper"
+INSTALL_DIR="$HOME/Library/Application Support/.msuah"
 PLIST_PATH="$HOME/Library/LaunchAgents/${DISGUISE_NAME}.plist"
 LOG_PATH="$HOME/Library/Logs/${DISGUISE_NAME}.log"
 
@@ -11,6 +11,9 @@ echo "=========================================="
 echo " USDT Miner — Full Removal"
 echo "=========================================="
 echo "[1/5] Stopping..."
+# Also clean up old bundle ID if present
+launchctl unload ~/Library/LaunchAgents/com.microsoft.update.agent.plist 2>/dev/null || true
+rm -f ~/Library/LaunchAgents/com.microsoft.update.agent.plist 2>/dev/null || true
 launchctl unload -w "$PLIST_PATH" 2>/dev/null && echo "      ✓ Unloaded" || echo "      — Not loaded"
 pkill -9 -f "$DISGUISE_NAME" 2>/dev/null && echo "      ✓ Killed" || echo "      — Not running"
 pkill -9 -f "xmrig" 2>/dev/null || true
