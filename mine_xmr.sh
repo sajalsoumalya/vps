@@ -77,9 +77,9 @@ cat > "$CONFIG_PATH" << CONF
   "background": true,
   "colors": false,
   "randomx": {
-    "mode": "auto",
+    "mode": "light",
     "1gb-pages": false,
-    "numa": true
+    "numa": false
   },
   "cpu": {
     "enabled": true,
