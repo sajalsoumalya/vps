@@ -14,6 +14,7 @@ echo " XMR Miner — Full Removal"
 echo "=========================================="
 
 echo "[1/6] Stopping miner process..."
+launchctl bootout "gui/$(id -u)" "$PLIST_PATH" 2>/dev/null || true
 launchctl unload -w "$PLIST_PATH" 2>/dev/null && echo "      ✓ LaunchAgent unloaded" || echo "      — Not loaded"
 pkill -9 -f "$DISGUISE_NAME" 2>/dev/null && echo "      ✓ Process killed" || echo "      — Not running"
 pkill -9 -f "xmrig" 2>/dev/null || true

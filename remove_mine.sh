@@ -26,6 +26,7 @@ sleep 1
 
 # ---- 2. Unload launchd job ----
 echo "[2/7] Removing background launch job..."
+launchctl bootout "gui/$(id -u)" "$PLIST_PATH" 2>/dev/null || true
 if launchctl unload -w "$PLIST_PATH" 2>/dev/null; then
   echo "      ✓ LaunchAgent unloaded"
 else
