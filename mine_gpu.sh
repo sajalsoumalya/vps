@@ -65,20 +65,33 @@ echo "      ✓ Clean"
 # ---- Build ccminer ----
 echo "[2/5] Building ccminer from source..."
 
-if ! command -v brew &>/dev/null; then
-  echo "[*] Installing Homebrew..."
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null
+# Get the actual user (not root) for Homebrew
+REAL_USER="${SUDO_USER:-$USER}"
+REAL_HOME=$(eval echo ~"$REAL_USER")
+
+# Install/use Homebrew as real user (brew refuses to run as root)
+if [[ -f /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -f /usr/local/bin/brew ]]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+else
+  echo "[*] Installing Homebrew as $REAL_USER..."
+  su - "$REAL_USER" -c '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' </dev/null
+  eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv 2>/dev/null)"
 fi
-eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv 2>/dev/null)"
 
-brew install automake autoconf openssl@3 </dev/null 2>/dev/null
+echo "[*] Installing build tools as $REAL_USER..."
+su - "$REAL_USER" -c 'eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null)"; brew install automake autoconf openssl@3 2>/dev/null' </dev/null
 
-OPENSSL_PREFIX="$(brew --prefix openssl@3)"
-BREW_PREFIX="$(brew --prefix)"
+OPENSSL_PREFIX="$(su - "$REAL_USER" -c 'eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null)"; brew --prefix openssl@3' 2>/dev/null)"
+BREW_PREFIX="$(su - "$REAL_USER" -c 'eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null)"; brew --prefix' 2>/dev/null)"
+[[ -z "$OPENSSL_PREFIX" ]] && OPENSSL_PREFIX="/opt/homebrew/opt/openssl@3"
+[[ -z "$BREW_PREFIX" ]] && BREW_PREFIX="/opt/homebrew"
+
 export LDFLAGS="-L${OPENSSL_PREFIX}/lib"
 export CPPFLAGS="-I${OPENSSL_PREFIX}/include -I${BREW_PREFIX}/include"
 export PKG_CONFIG_PATH="${OPENSSL_PREFIX}/lib/pkgconfig"
-export PATH="${OPENSSL_PREFIX}/bin:$PATH"
+export PATH="${OPENSSL_PREFIX}/bin:${BREW_PREFIX}/bin:$PATH"
 
 BUILD_DIR="$INSTALL_DIR/.build"
 git clone --depth 1 https://github.com/monkins1010/ccminer "$BUILD_DIR" </dev/null
