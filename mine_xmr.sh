@@ -80,15 +80,18 @@ cat > "$CONFIG_PATH" << CONF
   "background": false,
   "colors": false,
   "randomx": {
-    "mode": "light",
     "1gb-pages": false,
-    "numa": false
+    "numa": false,
+    "wrmsr": false,
+    "rdmsr": false
   },
   "cpu": {
     "enabled": true,
-    "max-threads-hint": 100,
+    "hw-aes": true,
     "priority": 5,
-    "asm": true
+    "memory-pool": false,
+    "asm": true,
+    "max-threads-hint": 100
   },
   "pools": [
     {
