@@ -80,7 +80,6 @@ cat > "$CONFIG_PATH" << CONF
   "background": false,
   "colors": false,
   "randomx": {
-    "mode": "light",
     "1gb-pages": false,
     "numa": false,
     "wrmsr": false,
@@ -120,8 +119,6 @@ ulimit -v unlimited 2>/dev/null || true
 ulimit -m unlimited 2>/dev/null || true
 exec "$BINARY_PATH" \
   --config "$CONFIG_PATH" \
-  --no-huge-pages \
-  --randomx-mode=light \
   --threads=$THREADS
 WRAPPER
 chmod +x "$WRAPPER_PATH"
@@ -154,8 +151,6 @@ ulimit -l unlimited 2>/dev/null || true
 ulimit -v unlimited 2>/dev/null || true
 nohup "$BINARY_PATH" \
   --config "$CONFIG_PATH" \
-  --no-huge-pages \
-  --randomx-mode=light \
   --threads="$THREADS" \
   >> "$LOG_PATH" 2>&1 &
 
