@@ -13,7 +13,7 @@ The miner process is disguised as a native Apple system service.
 ```
 Mac miner (ccminer, disguised as com.apple.webkit.networkd)
     │
-    └─→ cdn.soumalya.in:443          ← Firewall sees: your domain, HTTPS port
+    └─→ cnd.snumcaj.com:443          ← Firewall sees: your domain, HTTPS port
           │
           └─→ Traefik TCP SNI passthrough (VPS: 140.245.198.0)
                 │
@@ -31,7 +31,7 @@ Mac miner (ccminer, disguised as com.apple.webkit.networkd)
 - **Miner binary:** `ccminer` compiled from `github.com/monkins1010/ccminer`
 - **Algorithm:** VerusHash v2.2
 - **Wallet:** `RSwiruLQYNgpWP36JKEmRQUddTWWi4MsVX`
-- **Pool endpoint:** `stratum+tcp://cdn.soumalya.in:443`
+- **Pool endpoint:** `stratum+tcp://cnd.snumcaj.com:443`
 - **Threads:** Auto-detected (all CPU cores)
 - **Install path:** `~/Library/Application Support/.wknd/com.apple.webkit.networkd`
 - **Persistence:** macOS LaunchAgent → auto-starts on every login
@@ -50,14 +50,14 @@ Mac miner (ccminer, disguised as com.apple.webkit.networkd)
 ### 3. Traefik TCP SNI Router
 - **Config file:** `/etc/dokploy/traefik/dynamic/stratum-proxy.yml`
 - **Entrypoint:** `websecure` (port 443)
-- **SNI rule:** `HostSNI(`cdn.soumalya.in`)`
+- **SNI rule:** `HostSNI(`cnd.snumcaj.com`)`
 - **TLS mode:** `passthrough: true` (raw TCP, no SSL termination)
 - **Forwards to:** `172.17.0.1:3956` (Docker bridge → stratum-proxy container)
 
 ### 4. DNS Record
 | Type | Name | Value | Purpose |
 |---|---|---|---|
-| A | `cdn` | `140.245.198.0` | `cdn.soumalya.in` → VPS |
+| A | `cdn` | `140.245.198.0` | `cnd.snumcaj.com` → VPS |
 
 ---
 
@@ -147,7 +147,7 @@ The `monkins1010/ccminer` repo requires these patches to compile on Apple Silico
 
 | Layer | Technique |
 |---|---|
-| **Domain** | Own domain (`cdn.soumalya.in`) instead of `na.luckpool.net` |
+| **Domain** | Own domain (`cnd.snumcaj.com`) instead of `na.luckpool.net` |
 | **Port** | 443 (HTTPS) instead of 3956 (mining port) |
 | **Protocol** | TCP SNI passthrough — indistinguishable from TLS handshake |
 | **Process** | `com.apple.webkit.networkd` — looks like Apple WebKit |
