@@ -39,6 +39,8 @@ if [[ -c /dev/tty ]]; then
   echo ""
   if [[ "$USER_THREADS" =~ ^[0-9]+$ ]] && [[ "$USER_THREADS" -ge 1 ]] && [[ "$USER_THREADS" -le "$MAX_THREADS" ]]; then
     THREADS=$USER_THREADS
+  else
+    echo "  → Invalid — using default 80%"
   fi
   echo "  → Mining with $THREADS / $MAX_THREADS cores ($(( THREADS * 100 / MAX_THREADS ))%)"
   echo ""
