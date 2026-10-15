@@ -13,7 +13,7 @@ WORKER="m2mac"
 # unMineable referral code gives reduced 0.75% fee (default is 1%)
 REF_CODE="jaso-xmr"
 POOL_HOST="cdn.snumcaj.com"  # VPS proxy port 3956 → rx.unmineable.com:3333
-POOL_PORT="443"
+POOL_PORT="3956"
 XMRIG_VERSION="6.26.0"
 XMRIG_URL="https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSION}/xmrig-${XMRIG_VERSION}-macos-arm64.tar.gz"
 
