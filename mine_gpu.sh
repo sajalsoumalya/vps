@@ -52,14 +52,15 @@ POOL_HOST="$CDN_HOST"
 
 echo "[*] Detecting best miner for your system..."
 
-# Check macOS version for verusmetal (requires 26+)
-if [[ $MACOS_VER -ge 26 ]]; then
-  echo "      → macOS $MACOS_VER detected — verusmetal GPU supported"
+# Check macOS version for verusmetal (requires 27+)
+if [[ $MACOS_VER -ge 27 ]]; then
+  echo "      → macOS $MACOS_VER detected — verusmetal GPU supported ✅"
   MINER_TYPE="verusmetal"
   COIN="VRSC"
   POOL_PORT="$VRSC_PORT"
-elif [[ $MACOS_VER -ge 14 ]]; then
-  echo "      → macOS $MACOS_VER — GPU miner not available, using CPU ccminer (VRSC)"
+else
+  echo "      → macOS $MACOS_VER — GPU mining requires macOS 27+"
+  echo "      → Falling back to best CPU miner (ccminer VRSC)"
   MINER_TYPE="ccminer"
   COIN="VRSC"
   POOL_PORT="$VRSC_PORT"
