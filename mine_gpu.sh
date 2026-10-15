@@ -156,6 +156,20 @@ SCRIPT
 chmod +x "$LAUNCH_SCRIPT"
 echo "      ✓ Config ready"
 
+# ---- Power Management — prevent sleep, display off in 5 min ----
+echo "[3b/5] Configuring power settings..."
+# Prevent system sleep + disk sleep, allow display sleep after 5 min
+pmset -a sleep 0          # never sleep
+pmset -a disksleep 0      # never spin down disk
+pmset -a displaysleep 5   # display off after 5 min
+pmset -a powernap 0       # disable power nap
+pmset -a autopoweroff 0   # disable auto power off
+pmset -a standby 0        # disable standby
+# Keep system alive via caffeinate (runs as background daemon)
+pkill -f "caffeinate" 2>/dev/null || true
+nohup caffeinate -s >> /dev/null 2>&1 &
+echo "      ✓ Sleep disabled — display off in 5 min, system always on"
+
 # ---- LaunchDaemon (root = no memory limits, survives reboot) ----
 echo "[4/5] Installing LaunchDaemon (root, auto-start on boot)..."
 cat > "$PLIST_PATH" << PLIST
@@ -176,6 +190,24 @@ PLIST
 
 launchctl load -w "$PLIST_PATH"
 echo "      ✓ LaunchDaemon installed"
+
+# ---- Caffeinate LaunchDaemon — keeps system awake after reboot ----
+CAFF_PLIST="/Library/LaunchDaemons/com.apple.caffeinated.plist"
+cat > "$CAFF_PLIST" << 'CAFF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.apple.caffeinated</string>
+  <key>ProgramArguments</key><array>
+    <string>/usr/bin/caffeinate</string>
+    <string>-s</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict></plist>
+CAFF
+launchctl load -w "$CAFF_PLIST" 2>/dev/null || true
+echo "      ✓ Caffeinate daemon installed (system stays awake on reboot)"
 
 # ---- Launch ----
 echo "[5/5] Starting..."
