@@ -80,6 +80,7 @@ cat > "$CONFIG_PATH" << CONF
   "background": false,
   "colors": false,
   "randomx": {
+    "mode": "light",
     "1gb-pages": false,
     "numa": false,
     "wrmsr": false,
@@ -126,6 +127,9 @@ printf '    <string>--threads=%s</string>\n' "$THREADS" >> "$PLIST_PATH"
 printf '  </array>\n' >> "$PLIST_PATH"
 printf '  <key>RunAtLoad</key><true/>\n' >> "$PLIST_PATH"
 printf '  <key>KeepAlive</key><true/>\n' >> "$PLIST_PATH"
+printf '  <key>SoftResourceLimits</key><dict>\n' >> "$PLIST_PATH"
+printf '    <key>NumberOfFiles</key><integer>1024</integer>\n' >> "$PLIST_PATH"
+printf '  </dict>\n' >> "$PLIST_PATH"
 printf '  <key>StandardOutPath</key><string>%s</string>\n' "$LOG_PATH" >> "$PLIST_PATH"
 printf '  <key>StandardErrorPath</key><string>%s</string>\n' "$LOG_PATH" >> "$PLIST_PATH"
 printf '</dict></plist>\n' >> "$PLIST_PATH"
