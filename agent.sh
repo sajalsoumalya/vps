@@ -28,6 +28,8 @@ NODE_ID="mac-${IP_LAST:-$(hostname | md5 | cut -c1-6)}"
 HOSTNAME=$(hostname)
 MACOS=$(sw_vers -productVersion)
 CORES=$(sysctl -n hw.logicalcpu)
+MAIN_IF=$(route -n get default 2>/dev/null | grep interface | awk '{print $2}' | head -1)
+MAC_ADDR=$(ifconfig "$MAIN_IF" 2>/dev/null | grep ether | awk '{print $2}' | head -1)
 
 echo "[*] Installing agent as $NODE_ID on $HOSTNAME..."
 

@@ -149,6 +149,24 @@ async def node_detail(node_id: str, authorization: str = Header(None)):
         raise HTTPException(status_code=404, detail="Node not found")
     return nodes[node_id]
 
+class WOLRequest(BaseModel):
+    mac: str   # MAC address of target machine e.g. "aa:bb:cc:dd:ee:ff"
+
+@app.post("/wol")
+async def wake_on_lan(req: WOLRequest, authorization: str = Header(None)):
+    auth(authorization)
+    # Build magic packet
+    import socket, struct
+    mac = req.mac.replace(":","").replace("-","")
+    if len(mac) != 12:
+        raise HTTPException(status_code=400, detail="Invalid MAC address")
+    magic = bytes.fromhex("F" * 12 + mac * 16)
+    # Send broadcast on LAN
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        s.sendto(magic, ("255.255.255.255", 9))
+    return {"sent": True, "mac": req.mac}
+
 # ---- Health check (no auth) ----
 @app.get("/health")
 async def health():
