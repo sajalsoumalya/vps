@@ -43,6 +43,15 @@ MAX_THREADS=$(sysctl -n hw.logicalcpu)
 THREADS=$(( MAX_THREADS * 80 / 100 ))
 [[ $THREADS -lt 1 ]] && THREADS=1
 
+# Check if command center has set a thread override
+if [[ -f /tmp/_miner_threads ]]; then
+  CC_THREADS=$(cat /tmp/_miner_threads 2>/dev/null | tr -d '[:space:]')
+  if [[ "$CC_THREADS" =~ ^[0-9]+$ ]] && [[ "$CC_THREADS" -ge 1 ]] && [[ "$CC_THREADS" -le "$MAX_THREADS" ]]; then
+    THREADS=$CC_THREADS
+    echo "  → Resource config from Command Center: $THREADS cores"
+  fi
+fi
+
 echo ""
 echo "╔══════════════════════════════════════════╗"
 echo "║     XMR MINER — Apple Silicon (root)     ║"
