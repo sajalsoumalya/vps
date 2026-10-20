@@ -1,0 +1,23 @@
+services:
+  command-center:
+    build: .
+    container_name: command-center
+    restart: always
+    environment:
+      - CC_TOKEN=changeme123
+    volumes:
+      - ./data:/home/rs/command-center/data
+    networks:
+      - dokploy-network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.cc.rule=Host(`cc.snumcaj.com`)
+      - traefik.http.routers.cc.entrypoints=websecure
+      - traefik.http.routers.cc.tls.certresolver=letsencrypt
+      - traefik.http.routers.cc-http.rule=Host(`cc.snumcaj.com`)
+      - traefik.http.routers.cc-http.entrypoints=web
+      - traefik.http.services.cc.loadbalancer.server.port=8765
+
+networks:
+  dokploy-network:
+    external: true
