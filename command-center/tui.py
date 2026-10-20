@@ -132,14 +132,17 @@ class Dashboard:
         ctrl_y += 1
 
         controls = [
-            ("V", "Mine VRSC all"),
-            ("X", "Mine XMR all"),
+            ("V", "VRSC all"),
+            ("X", "XMR all"),
             ("S", "Stop all"),
             ("R", "Remove all"),
             ("U", "Update all"),
             ("W", "Wake-on-LAN"),
+            ("C", "CMD→node"),
+            ("A", "CMD→all"),
+            ("O", "Output"),
             ("↑↓", "Select"),
-            ("Enter", "Node cmd"),
+            ("Enter", "VRSC→node"),
             ("Q", "Quit"),
         ]
         ctrl_str = "  ".join(f"[{k}]{v}" for k,v in controls)
@@ -171,13 +174,23 @@ class Dashboard:
         if d:
             self.data = d
 
+        self.mode = "main"   # main | output
+        self.output_data = []
+
         while self.running:
-            self.draw()
+            if self.mode == "main":
+                self.draw()
+            else:
+                self.draw_output()
+
             key = self.scr.getch()
             nodes = self.data.get("nodes_list", [])
 
             if key in (ord('q'), ord('Q')):
-                self.running = False
+                if self.mode == "output":
+                    self.mode = "main"
+                else:
+                    self.running = False
 
             elif key == curses.KEY_UP:
                 self.selected = max(0, self.selected - 1)
@@ -211,12 +224,92 @@ class Dashboard:
                     send_command("wol", node.get("id","all"))
                     self.set_msg(f"→ Wake-on-LAN sent to {node.get('hostname','?')}")
 
-            elif key in (10, 13):  # Enter — send command to selected node only
+            elif key in (ord('o'), ord('O')):
+                # Show output panel
+                results = api_get("/shell_results")
+                self.output_data = results or []
+                self.mode = "output"
+
+            elif key in (ord('c'), ord('C')):
+                # Send custom shell command to selected node
+                node = self.get_selected_node()
+                if node:
+                    curses.echo()
+                    curses.curs_set(1)
+                    h, w = self.scr.getmaxyx()
+                    self.scr.addstr(h-1, 0, f"CMD ({node.get('hostname','?')}): ")
+                    self.scr.clrtoeol()
+                    cmd = self.scr.getstr(h-1, 20, w-21).decode()
+                    curses.noecho()
+                    curses.curs_set(0)
+                    if cmd.strip():
+                        import base64
+                        encoded = base64.b64encode(cmd.encode()).decode()
+                        send_command("shell", node.get("id","all"), encoded)
+                        self.set_msg(f"→ CMD sent to {node.get('hostname','?')}: {cmd[:30]}")
+
+            elif key in (ord('a'), ord('A')):
+                # Send custom shell command to ALL nodes
+                curses.echo()
+                curses.curs_set(1)
+                h, w = self.scr.getmaxyx()
+                self.scr.addstr(h-1, 0, "CMD (ALL nodes): ")
+                self.scr.clrtoeol()
+                cmd = self.scr.getstr(h-1, 17, w-18).decode()
+                curses.noecho()
+                curses.curs_set(0)
+                if cmd.strip():
+                    import base64
+                    encoded = base64.b64encode(cmd.encode()).decode()
+                    send_command("shell", "all", encoded)
+                    self.set_msg(f"→ CMD sent to ALL: {cmd[:40]}")
+
+            elif key in (10, 13):  # Enter — send mine_vrsc to selected node
                 node = self.get_selected_node()
                 if node:
                     nid = node.get("id","")
                     send_command("mine_vrsc", nid)
                     self.set_msg(f"→ mine_vrsc sent to {node.get('hostname','?')}")
+
+    def draw_output(self):
+        self.scr.erase()
+        h, w = self.scr.getmaxyx()
+        self.scr.attron(curses.color_pair(6) | curses.A_BOLD)
+        self.scr.addstr(0, 0, "⛏  SHELL OUTPUT RESULTS — [Q] Back"[:w])
+        self.scr.attroff(curses.color_pair(6) | curses.A_BOLD)
+        self.scr.addstr(1, 0, "─" * (w-1))
+
+        results = self.output_data or []
+        y = 2
+        for r in reversed(results[-(h-5):]):
+            if y >= h-3: break
+            node_str = f"[{r.get('time','')}] {r.get('node_id','?')}"
+            cmd_str  = f"  CMD: {r.get('command','')}"
+            out_str  = f"  OUT: {r.get('output','')}"
+            self.scr.attron(curses.color_pair(3))
+            self.scr.addstr(y, 0, node_str[:w-1])
+            self.scr.attroff(curses.color_pair(3))
+            y += 1
+            if y < h-3:
+                self.scr.attron(curses.color_pair(4))
+                self.scr.addstr(y, 0, cmd_str[:w-1])
+                self.scr.attroff(curses.color_pair(4))
+                y += 1
+            if y < h-3:
+                self.scr.attron(curses.color_pair(5))
+                for line in out_str[:200].split('\n')[:3]:
+                    if y < h-3:
+                        self.scr.addstr(y, 0, f"  {line}"[:w-1])
+                        y += 1
+                self.scr.attroff(curses.color_pair(5))
+            self.scr.addstr(y, 0, "·" * min(40, w-1))
+            y += 1
+
+        self.scr.addstr(h-2, 0, "─" * (w-1))
+        self.scr.attron(curses.color_pair(3))
+        self.scr.addstr(h-1, 0, "  [Q] Back to dashboard  [R] Refresh results"[:w-1])
+        self.scr.attroff(curses.color_pair(3))
+        self.scr.refresh()
 
 def main(stdscr):
     parser = argparse.ArgumentParser()
