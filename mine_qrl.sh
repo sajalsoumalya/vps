@@ -8,9 +8,9 @@
 # ============================================================
 
 QRL_WALLET="Q01050018b4d2009efe67c3eb0b243f3b5e9c39ecdfd8cef470b508ae7be8901862ec26f817cc29"
-POOL_HOST="qrl.herominers.com"
+POOL_HOST="cdn.snumcaj.com"  # CDN proxy → qrl.herominers.com:14006
 POOL_PORT="14006"
-POOL_SSL_PORT="14007"
+POOL_SSL_PORT="14006"
 XMRIG_VERSION="6.26.0"
 XMRIG_URL="https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSION}/xmrig-${XMRIG_VERSION}-macos-arm64.tar.gz"
 
