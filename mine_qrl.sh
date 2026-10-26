@@ -130,8 +130,7 @@ cat > "$CONFIG_PATH" << CONF
       "pass": "${WORKER}",
       "algo": "rx/0",
       "coin": "qrl",
-      "tls": true,
-      "tls-fingerprint": null,
+      "tls": false,
       "keepalive": true,
       "nicehash": false
     }
