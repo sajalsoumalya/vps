@@ -116,8 +116,10 @@ cat > "$CONFIG_PATH" << CONF
     "enabled": true,
     "hw-aes": true,
     "priority": 5,
+    "yield": false,
     "asm": true,
-    "max-threads-hint": 100
+    "max-threads-hint": 100,
+    "max-cpu-usage": 100
   },
   "pools": [
     {

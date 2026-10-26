@@ -116,7 +116,9 @@ cat > "$CONFIG_PATH" << CONF
     "priority": 5,
     "memory-pool": false,
     "asm": true,
-    "max-threads-hint": 100
+    "yield": false,
+    "max-threads-hint": 100,
+    "max-cpu-usage": 100
   },
   "pools": [
     {
