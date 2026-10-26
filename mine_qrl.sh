@@ -8,11 +8,8 @@
 # ============================================================
 
 QRL_WALLET="Q01050018b4d2009efe67c3eb0b243f3b5e9c39ecdfd8cef470b508ae7be8901862ec26f817cc29"
-# Try direct first — Oracle blocks HeroMiners but Mac network may not
-POOL_HOST_DIRECT="qrl.herominers.com"
-POOL_HOST_CDN="cdn.snumcaj.com"
+POOL_HOST="qrl.herominers.com"
 POOL_PORT="14006"
-POOL_SSL_PORT="14007"
 XMRIG_VERSION="6.26.0"
 XMRIG_URL="https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSION}/xmrig-${XMRIG_VERSION}-macos-arm64.tar.gz"
 
@@ -100,26 +97,8 @@ chmod +x "$BINARY_PATH"
 xattr -d com.apple.quarantine "$BINARY_PATH" 2>/dev/null || true
 echo "      ✓ Binary ready"
 
-# ---- 3. Auto-detect working pool ----
+# ---- 3. Write config ----
 echo "[3/6] Writing config..."
-POOL_HOST="$POOL_HOST_CDN"
-USE_TLS="false"
-
-# Test if Mac can reach HeroMiners directly (most home/office networks can)
-if timeout 4 bash -c "echo > /dev/tcp/$POOL_HOST_DIRECT/$POOL_PORT" 2>/dev/null; then
-  POOL_HOST="$POOL_HOST_DIRECT"
-  USE_TLS="false"
-  echo "      ✓ Direct connection: $POOL_HOST:$POOL_PORT"
-elif timeout 4 bash -c "echo > /dev/tcp/$POOL_HOST_DIRECT/$POOL_SSL_PORT" 2>/dev/null; then
-  POOL_HOST="$POOL_HOST_DIRECT"
-  POOL_PORT="$POOL_SSL_PORT"
-  USE_TLS="true"
-  echo "      ✓ Direct SSL: $POOL_HOST:$POOL_PORT"
-else
-  POOL_HOST="$POOL_HOST_CDN"
-  USE_TLS="false"
-  echo "      ✓ Using CDN proxy: $POOL_HOST:$POOL_PORT"
-fi
 
 cat > "$CONFIG_PATH" << CONF
 {
@@ -146,7 +125,7 @@ cat > "$CONFIG_PATH" << CONF
       "pass": "${WORKER}",
       "algo": "rx/0",
       "coin": "qrl",
-      "tls": ${USE_TLS},
+      "tls": false,
       "keepalive": true,
       "nicehash": false
     }
