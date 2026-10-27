@@ -175,7 +175,8 @@ pmset -a autopoweroff 0   # disable auto power off
 pmset -a standby 0        # disable standby
 pmset -a halfdim 0        # disable display dimming
 pmset -a tcpkeepalive 1
-pmset -a powermode 2       # High performance mode — max CPU clock   # keep network alive when sleeping
+pmset -a powermode 2       # High performance mode — max CPU clock
+pmset -a tcpkeepalive 1   # keep network alive when sleeping
 
 # Prevent idle sleep at OS level (persists through lock screen)
 systemsetup -setcomputersleep Never 2>/dev/null || true
