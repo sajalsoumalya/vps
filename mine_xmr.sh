@@ -146,6 +146,7 @@ pmset -a autopoweroff 0
 pmset -a standby 0
 pmset -a halfdim 0
 pmset -a tcpkeepalive 1
+pmset -a powermode 2       # High performance mode — max CPU clock
 systemsetup -setcomputersleep Never 2>/dev/null || true
 systemsetup -setdisplaysleep 5 2>/dev/null || true
 pkill -f "caffeinate" 2>/dev/null || true
