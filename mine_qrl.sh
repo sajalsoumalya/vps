@@ -129,7 +129,7 @@ cat > "$CONFIG_PATH" << CONF
     "max-threads-hint": 100,
     "memory-pool": false,
     "max-cpu-usage": 100,
-    "rx": [0, 1, 2, 3, 4, 5, 6, 7]
+    "rx": true
   },
   "pools": [
     {
