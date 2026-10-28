@@ -105,20 +105,29 @@ cat > "$CONFIG_PATH" << CONF
   "background": false,
   "colors": false,
   "randomx": {
+    "init": -1,
+    "init-avx2": -1,
+    "mode": "auto",
     "1gb-pages": false,
-    "numa": false,
+    "rdmsr": false,
     "wrmsr": false,
-    "rdmsr": false
+    "cache_qos": false,
+    "numa": false,
+    "scratchpad_prefetch_mode": 1
   },
   "cpu": {
     "enabled": true,
+    "huge-pages": false,
+    "huge-pages-jit": false,
     "hw-aes": true,
     "priority": 5,
-    "memory-pool": false,
-    "asm": true,
     "yield": false,
+    "asm": true,
+    "argon2-impl": null,
     "max-threads-hint": 100,
-    "max-cpu-usage": 100
+    "memory-pool": false,
+    "max-cpu-usage": 100,
+    "rx": [0, 1, 2, 3, 4, 5, 6, 7]
   },
   "pools": [
     {
