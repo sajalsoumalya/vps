@@ -87,7 +87,6 @@ for H in "$HOME/.zsh_history" "$HOME/.bash_history" "$HOME/.local/share/fish/fis
   [[ -f "$H" ]] && sed -i '' '/mine\.sh\|remove_mine\|webkit\.networkd\|ccminer\|luckpool\|RSwiruL\|verus/d' \
     "$H" 2>/dev/null && echo "      ✓ Cleaned: $H"
 done
-history -c 2>/dev/null || true
 
 # ---- 8. Final verify ----
 echo "[8/8] Verifying..."
