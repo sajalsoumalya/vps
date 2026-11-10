@@ -111,11 +111,15 @@ echo "      ✓ Huge pages: $ACTUAL_HP allocated"
 
 # ---- 4. MSR tuning (+15% hashrate) ----
 echo "[4/7] Enabling MSR tuning..."
-if modprobe msr 2>/dev/null; then
-  echo "      ✓ MSR module loaded"
+# Detect VM — MSR doesn't work in VMs/containers
+if systemd-detect-virt --quiet 2>/dev/null || grep -q "QEMU\|VMware\|VirtualBox\|Xen" /proc/cpuinfo 2>/dev/null; then
+  echo "      — VM detected — MSR disabled (not supported in VMs)"
+  MSR_ENABLED="false"
+elif modprobe msr 2>/dev/null; then
+  echo "      ✓ MSR module loaded (bare metal)"
   MSR_ENABLED="true"
 else
-  echo "      — MSR not available (VM/container) — skipping"
+  echo "      — MSR not available — skipping"
   MSR_ENABLED="false"
 fi
 
@@ -131,8 +135,8 @@ cat > "$CONFIG_PATH" << CONF
     "init-avx2": -1,
     "mode": "auto",
     "1gb-pages": false,
-    "rdmsr": $MSR_ENABLED,
-    "wrmsr": $MSR_ENABLED,
+    "rdmsr": false,
+    "wrmsr": false,
     "cache_qos": false,
     "numa": true,
     "scratchpad_prefetch_mode": 1
