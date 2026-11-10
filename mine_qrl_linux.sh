@@ -20,8 +20,8 @@ WORKER="qrl-${IP_LAST:-$(hostname | cut -c1-6)}"
 # ---- Detect architecture ----
 ARCH=$(uname -m)
 case "$ARCH" in
-  x86_64)  XMRIG_ARCH="linux-x64" ;;
-  aarch64) XMRIG_ARCH="linux-arm64" ;;
+  x86_64)  XMRIG_ARCH="linux-static-x64" ;;
+  aarch64) XMRIG_ARCH="linux-aarch64" ;;
   armv7l)  XMRIG_ARCH="linux-armv7" ;;
   *)       echo "[!] Unsupported arch: $ARCH"; exit 1 ;;
 esac
